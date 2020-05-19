@@ -1,14 +1,13 @@
 <div class="card mb-4">
-    <div class="card-header">
-        <i class="fas fa-lightbulb"></i> Bolt Configuration Notices
+    <div class="card-header progress-bar progress-bar-striped progress-bar-animated">
+        <span  style="text-align: left;"><i class="fas fa-lightbulb" style="display: inline-block"></i>  Bolt Configuration Notices</span>
     </div>
     <div class="card-body">
-        <p><strong>{{ title|raw }}</strong></p>
-        {{ news|raw }}
-        {% if link %}
-            <a href="{{ link }}" target="_blank" class="btn btn-tertiary btn-sm">
-                <i class="fas fa-external-link-square-alt"></i> {{ __('general.phrase.read-more') }}
-            </a>
-        {% endif %}
+
+        {% for result in results %}
+            <p>{{ result.notice|raw }}</p>
+            <small>{{ result.info|raw }}</small>
+        {% endfor %}
+
     </div>
 </div>

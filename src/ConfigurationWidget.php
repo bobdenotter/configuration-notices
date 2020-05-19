@@ -41,10 +41,7 @@ class ConfigurationWidget extends BaseWidget implements TwigAwareInterface, Requ
         $results = $checks->getResults();
 
         $context = [
-            'type' => 'error',
-            'title' => 'Unable to fetch news!',
-            'link' => '',
-            'news' => "<p>Invalid JSON feed returned by <code> fdsfsdß</code></p><small>" . " cdscdscds </small>",
+            'results' => $results,
         ];
 
         return parent::run($context);
