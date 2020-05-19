@@ -1,0 +1,14 @@
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="far fa-newspaper"></i> &nbsp; {{ __('general.latest_bolt_news') }}
+    </div>
+    <div class="card-body">
+        <p><strong>{{ title|raw }}</strong></p>
+        {{ news|raw }}
+        {% if link %}
+            <a href="{{ link }}" target="_blank" class="btn btn-tertiary btn-sm">
+                <i class="fas fa-external-link-square-alt"></i> {{ __('general.phrase.read-more') }}
+            </a>
+        {% endif %}
+    </div>
+</div>
