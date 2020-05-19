@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Bolt\NewsWidget;
+namespace BobdenOtter\ConfigurationNotices;
 
 use Bolt\Extension\BaseExtension;
 
@@ -15,6 +15,6 @@ class Extension extends BaseExtension
 
     public function initialize(): void
     {
-        $this->registerWidget(new NewsWidget());
+        $this->registerWidget(new ConfigurationWidget());
     }
 }

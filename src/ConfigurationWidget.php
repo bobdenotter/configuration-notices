@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Bolt\NewsWidget;
+namespace BobdenOtter\ConfigurationNotices;
 
 use Bolt\Common\Exception\ParseException;
 use Bolt\Common\Json;
@@ -19,12 +19,12 @@ use Bolt\Widget\StopwatchTrait;
 use Bolt\Widget\TwigAwareInterface;
 use Symfony\Component\HttpClient\HttpClient;
 
-class NewsWidget extends BaseWidget implements TwigAwareInterface, RequestAwareInterface, CacheAwareInterface, StopwatchAwareInterface
+class ConfigurationWidget extends BaseWidget implements TwigAwareInterface, RequestAwareInterface, CacheAwareInterface, StopwatchAwareInterface
 {
     use CacheTrait;
     use StopwatchTrait;
 
-    protected $name = 'News Widget';
+    protected $name = 'Configuration Notices Widget';
     protected $target = AdditionalTarget::WIDGET_BACK_DASHBOARD_ASIDE_TOP;
     protected $priority = 150;
     protected $template = '@news-widget/news.html.twig';
