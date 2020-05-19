@@ -7,6 +7,7 @@ namespace BobdenOtter\ConfigurationNotices;
 use Bolt\Common\Exception\ParseException;
 use Bolt\Common\Json;
 use Bolt\Common\Str;
+use Bolt\Extension\BaseExtension;
 use Bolt\Version;
 use Bolt\Widget\BaseWidget;
 use Bolt\Widget\CacheAwareInterface;
@@ -26,132 +27,39 @@ class ConfigurationWidget extends BaseWidget implements TwigAwareInterface, Requ
 
     protected $name = 'Configuration Notices Widget';
     protected $target = AdditionalTarget::WIDGET_BACK_DASHBOARD_ASIDE_TOP;
-    protected $priority = 150;
-    protected $template = '@news-widget/news.html.twig';
+    protected $priority = 100;
+    protected $template = '@configuration-notices-widget/configuration.html.twig';
     protected $zone = RequestZone::BACKEND;
-    protected $cacheDuration = 4 * 3600;
-
-    protected $source = 'https://news.boltcms.io/';
+    protected $cacheDuration = -60;
 
     protected function run(array $params = []): ?string
     {
-        $news = $this->getNews();
+        /** @var BaseExtension $extension */
+        $extension = $this->getExtension();
 
-        try {
+        $checks = new Checks($extension->getBoltConfig(), $extension->getRequest());
+        $results = $checks->getResults();
 
-            if (isset($news['information'])) {
-                $currentItem = $news['information'];
-            } else {
-                $currentItem = $news['error'];
-            }
-
-            $context = [
-                'title' => $currentItem['fieldValues']['title'],
-                'news' => $currentItem['fieldValues']['content'],
-                'link' => $currentItem['fieldValues']['link'],
-                'datechanged' => $currentItem['modifiedAt'],
-                'datefetched' => date('Y-m-d H:i:s'),
-            ];
-        } catch (\Exception $e) {
-            $context = [
-                'type' => 'error',
-                'title' => 'Unable to fetch news!',
-                'link' => '',
-                'news' => "<p>Invalid JSON feed returned by <code>" . $this->source . "</code></p><small>" . $e->getMessage() . " </small>",
-            ];
-        }
+        $context = [
+            'type' => 'error',
+            'title' => 'Unable to fetch news!',
+            'link' => '',
+            'news' => "<p>Invalid JSON feed returned by <code> fdsfsdß</code></p><small>" . " cdscdscds </small>",
+        ];
 
         return parent::run($context);
     }
 
-    /**
-     * Get the news from Bolt HQ.
-     */
-    private function getNews(): array
+    private function getResults()
     {
-        $options = $this->fetchNewsOptions();
+        dump(Checks::class);
 
-        try {
-            $client = HttpClient::create();
-            $fetchedNewsData = $client->request('GET', $this->source, $options)->getContent();
-        } catch (\Exception $e) {
+        /** @var BaseExtension $extension */
+        $extension = $this->extension;
 
-            $message = Str::shyphenate(preg_replace('/hash=[a-z0-9\%]+/i', '', $e->getMessage()));
+        $checks = $extension->getContainer();
 
-            return [
-                'error' => [
-                    'type' => 'error',
-                    'fieldValues' => [
-                        'title' => 'Unable to fetch news!',
-                        'content' => "<p>Unable to connect to " . $this->source . "</p><small>" . $message . " </small>",
-                        'link' => null,
-                    ],
-                    'modifiedAt' => '0000-01-01 00:00:00',
-                ],
-            ];
-        }
-
-        try {
-            $fetchedNewsItems = Json::parse($fetchedNewsData);
-        } catch (ParseException $e) {
-            // Just move on, a user-friendly notice is returned below.
-            $fetchedNewsItems = [];
-        }
-
-        $news = [];
-
-        // Iterate over the items, pick the first news-item that
-        // applies and the first alert we need to show
-        foreach ($fetchedNewsItems as $item) {
-            $type = isset($item->type) ? $item->type : 'information';
-            if (! isset($news[$type])
-                && (empty($item->target_version) || Version::compare($item->target_version, '>'))
-            ) {
-                $news[$type] = $item;
-            }
-        }
-
-        if ($news) {
-            return $news;
-        }
-
-        return [
-            'error' => [
-                'type' => 'error',
-                'fieldValues' => [
-                    'title' => 'Unable to fetch news!',
-                    'content' => "<p>Unable to parse JSON from " . $this->source . "</p>",
-                    'link' => null,
-                ],
-                'modifiedAt' => '0000-01-01 00:00:00',
-            ],
-        ];
+        dd($checks);
     }
 
-    /**
-     * Get the guzzle options.
-     */
-    private function fetchNewsOptions(): array
-    {
-        $conn = $this->getExtension()->getObjectManager()->getConnection();
-        $db = new \Bolt\Doctrine\Version($conn);
-        $config = $this->getExtension()->getBoltConfig();
-
-        $options = [
-            'v' => Version::VERSION,
-            'php' => PHP_VERSION,
-            'db_driver' => $db->getPlatform()['driver_name'],
-            'db_version' => $db->getPlatform()['server_version'],
-            'host' => $this->getRequest()->getHost(),
-            'name' => $config->get('general/sitename'),
-            'env' => $this->getExtension()->getContainer()->getParameter('kernel.environment'),
-        ];
-
-        return [
-            'query' => [
-                'hash' => base64_encode(serialize($options)),
-            ],
-            'timeout' => 10,
-        ];
-    }
 }

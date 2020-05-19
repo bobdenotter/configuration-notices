@@ -10,11 +10,11 @@ class Extension extends BaseExtension
 {
     public function getName(): string
     {
-        return 'Dashboard News Widget';
+        return 'Bolt Configuration Notices Widget';
     }
 
     public function initialize(): void
     {
-        $this->registerWidget(new ConfigurationWidget());
+        $this->addWidget(new ConfigurationWidget());
     }
 }

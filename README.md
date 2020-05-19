@@ -1,7 +1,7 @@
-# 📰 Bolt News Widget
+# 📰 Bolt Configuration Notices Widget
 
-A simple Widget Extension to display the latest Bolt news on the dashboard. 
-Installation:
+Bolt Configuration Notices is a small tool to point out common pitfalls for 
+Bolt 4 configuration settings.
 
 ```bash
 composer require bobdenotter/configuration-notices 
