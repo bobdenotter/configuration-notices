@@ -97,7 +97,6 @@ class Checks
         $fromParameters = explode('|', $this->getParameter('bolt.requirement.contenttypes'));
 
         foreach ($this->boltConfig->get('contenttypes') as $contentType) {
-            dump($contentType);
             if (! in_array($contentType->get('slug'), $fromParameters, true)) {
                 $this->setSeverity(3);
                 $this->setNotice(
