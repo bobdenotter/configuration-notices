@@ -1,8 +1,8 @@
 <?php
 
+declare(strict_types=1);
 
 namespace BobdenOtter\ConfigurationNotices;
-
 
 use Bolt\Configuration\Config;
 use Symfony\Component\DependencyInjection\Container;
@@ -52,11 +52,10 @@ class Checks
         ];
     }
 
-
     /**
      * Check whether the site is live or not.
      */
-    private function liveCheck()
+    private function liveCheck(): void
     {
         if ($this->getParameter('kernel.environment') === 'prod' && $this->getParameter('kernel.debug') !== '1') {
             return;
@@ -75,7 +74,7 @@ class Checks
         ));
 
         foreach ($domainPartials as $partial) {
-            if (strpos($host['host'], $partial) !== false) {
+            if (mb_strpos($host['host'], $partial) !== false) {
                 return;
             }
         }
@@ -97,10 +96,9 @@ class Checks
     {
         $fromParameters = explode('|', $this->getParameter('bolt.requirement.contenttypes'));
 
-        foreach($this->boltConfig->get('contenttypes') as $contentType) {
+        foreach ($this->boltConfig->get('contenttypes') as $contentType) {
             dump($contentType);
-            if (!in_array($contentType->get('slug'), $fromParameters)) {
-
+            if (! in_array($contentType->get('slug'), $fromParameters, true)) {
                 $this->setSeverity(3);
                 $this->setNotice(
                     sprintf("A new ContentType ('%s') was added. Make sure to clear the cache, so it shows up correctly.", $contentType->get('name'))

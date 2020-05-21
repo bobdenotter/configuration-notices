@@ -4,11 +4,7 @@ declare(strict_types=1);
 
 namespace BobdenOtter\ConfigurationNotices;
 
-use Bolt\Common\Exception\ParseException;
-use Bolt\Common\Json;
-use Bolt\Common\Str;
 use Bolt\Extension\BaseExtension;
-use Bolt\Version;
 use Bolt\Widget\BaseWidget;
 use Bolt\Widget\CacheAwareInterface;
 use Bolt\Widget\CacheTrait;
@@ -18,7 +14,6 @@ use Bolt\Widget\RequestAwareInterface;
 use Bolt\Widget\StopwatchAwareInterface;
 use Bolt\Widget\StopwatchTrait;
 use Bolt\Widget\TwigAwareInterface;
-use Symfony\Component\HttpClient\HttpClient;
 
 class ConfigurationWidget extends BaseWidget implements TwigAwareInterface, RequestAwareInterface, CacheAwareInterface, StopwatchAwareInterface
 {
@@ -50,17 +45,4 @@ class ConfigurationWidget extends BaseWidget implements TwigAwareInterface, Requ
 
         return parent::run($context);
     }
-
-    private function getResults()
-    {
-        dump(Checks::class);
-
-        /** @var BaseExtension $extension */
-        $extension = $this->extension;
-
-        $checks = $extension->getContainer();
-
-        dd($checks);
-    }
-
 }
