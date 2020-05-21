@@ -5,27 +5,35 @@ namespace BobdenOtter\ConfigurationNotices;
 
 
 use Bolt\Configuration\Config;
+use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\HttpFoundation\Request;
+use Tightenco\Collect\Support\Collection;
 
 class Checks
 {
     protected $defaultDomainPartials = ['.dev', 'dev.', 'devel.', 'development.', 'test.', '.test', 'new.', '.new', '.local', 'local.'];
 
     /** @var Config */
-    private $config;
+    private $boltConfig;
 
     /** @var Request */
     private $request;
 
-    private $results = [];
+    /** @var Collection */
+    private $extensionConfig;
 
-    public function __construct(Config $config, Request $request)
+    private $notices = [];
+    private $severity = 0;
+
+    /** @var Container */
+    private $container;
+
+    public function __construct(Config $boltConfig, Request $request, Collection $extensionConfig, Container $container)
     {
-        $this->config = $config;
+        $this->boltConfig = $boltConfig;
         $this->request = $request;
-
-
-
+        $this->extensionConfig = $extensionConfig;
+        $this->container = $container;
     }
 
     public function getResults(): array
@@ -36,21 +44,23 @@ class Checks
         }
 
         $this->liveCheck();
+        $this->newContentTypeCheck();
 
-        dump($this->results);
-
-        return $this->results;
+        return [
+            'severity' => $this->severity,
+            'notices' => $this->notices,
+        ];
     }
 
 
     /**
      * Check whether the site is live or not.
      */
-    protected function liveCheck()
+    private function liveCheck()
     {
-//        if (!$this->app['debug']) {
-//            return;
-//        }
+        if ($this->getParameter('kernel.environment') === 'prod' && $this->getParameter('kernel.debug') !== '1') {
+            return;
+        }
 
         $host = parse_url($this->request->getSchemeAndHttpHost());
 
@@ -59,10 +69,8 @@ class Checks
             return;
         }
 
-//        $domainPartials = (array) $this->app['config']->get('general/debug_local_domains', []);
-
         $domainPartials = array_unique(array_merge(
-//            (array) $domainPartials,
+            $this->extensionConfig->get('local_domains'),
             $this->defaultDomainPartials
         ));
 
@@ -72,10 +80,52 @@ class Checks
             }
         }
 
-        $this->results[] = [
-            'severity' => 2,
-            'notice'   => "It seems like this website is running on a <strong>non-development environment</strong>, while 'debug' is enabled. Make sure debug is disabled in production environments. If you don't do this, it will result in an extremely large <code>app/cache</code> folder and a measurable reduced performance across all pages.",
-            'info'     => "If you wish to hide this message, add a key to your <code>config.yml</code> with a (partial) domain name in it, that should be seen as a development environment: <code>debug_local_domains: [ '.foo' ]</code>.",
+        $this->setSeverity(1);
+        $this->setNotice(
+            "It seems like this website is running on a <strong>non-development environment</strong>, 
+             while development mode is enabled (<code>APP_ENV=dev</code> and/or <code>APP_DEBUG=1</code>). 
+             Make sure debug is disabled in production environments. If you don't do this, it will 
+             result in an extremely large <code>var/cache</code> folder and a measurable reduced 
+             performance across all pages.",
+            "If you wish to hide this message, add a key to your <abbr title='config/extensions/bobdenotter-configurationnotices.yaml'>
+             config <code>yaml</code></abbr> file with a (partial) domain name in it, that should be 
+             seen as a development environment: <code>local_domains: [ '.foo' ]</code>."
+        );
+    }
+
+    private function newContentTypeCheck(): void
+    {
+        $fromParameters = explode('|', $this->getParameter('bolt.requirement.contenttypes'));
+
+        foreach($this->boltConfig->get('contenttypes') as $contentType) {
+            dump($contentType);
+            if (!in_array($contentType->get('slug'), $fromParameters)) {
+
+                $this->setSeverity(3);
+                $this->setNotice(
+                    sprintf("A new ContentType ('%s') was added. Make sure to clear the cache, so it shows up correctly.", $contentType->get('name'))
+                );
+
+                return;
+            }
+        }
+    }
+
+    private function setSeverity(int $severity): void
+    {
+        $this->severity = max($severity, $this->severity);
+    }
+
+    private function setNotice(string $notice, ?string $info = null): void
+    {
+        $this->notices[] = [
+            'notice' => $notice,
+            'info' => $info,
         ];
+    }
+
+    private function getParameter(string $parameter): ?string
+    {
+        return $this->container->getParameter($parameter);
     }
 }

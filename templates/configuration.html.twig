@@ -1,13 +1,18 @@
 <div class="card mb-4">
-    <div class="card-header progress-bar progress-bar-striped progress-bar-animated">
+    <div class="card-header progress-bar progress-bar-striped progress-bar-animated
+        {% if results.severity == 1 %}bg-info{% elseif results.severity == 2 %}bg-warning{% else %}bg-danger{% endif %}">
         <span  style="text-align: left;"><i class="fas fa-lightbulb" style="display: inline-block"></i>  Bolt Configuration Notices</span>
     </div>
     <div class="card-body">
 
-        {% for result in results %}
+        {% for result in results.notices %}
             <p>{{ result.notice|raw }}</p>
+            {% if result.info %}
             <small>{{ result.info|raw }}</small>
+            {% endif %}
+            {% if not loop.last %}<hr>{% endif %}
         {% endfor %}
 
     </div>
 </div>
+{{ dump(results) }}

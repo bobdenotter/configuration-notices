@@ -37,8 +37,12 @@ class ConfigurationWidget extends BaseWidget implements TwigAwareInterface, Requ
         /** @var BaseExtension $extension */
         $extension = $this->getExtension();
 
-        $checks = new Checks($extension->getBoltConfig(), $extension->getRequest());
+        $checks = new Checks($extension->getBoltConfig(), $extension->getRequest(), $extension->getConfig(), $extension->getContainer());
         $results = $checks->getResults();
+
+        if (empty($results['notices'])) {
+            return null;
+        }
 
         $context = [
             'results' => $results,
