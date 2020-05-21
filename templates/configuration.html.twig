@@ -6,13 +6,13 @@
     <div class="card-body">
 
         {% for result in results.notices %}
-            <p>{{ result.notice|raw }}</p>
+            <p>{{ result.notice|raw }}
             {% if result.info %}
-            <small>{{ result.info|raw }}</small>
+            <br><small>{{ result.info|raw }}</small>
             {% endif %}
+            </p>
             {% if not loop.last %}<hr>{% endif %}
         {% endfor %}
 
     </div>
 </div>
-{{ dump(results) }}
