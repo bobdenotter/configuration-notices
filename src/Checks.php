@@ -200,7 +200,7 @@ class Checks
     /**
      * Check if the thumbs/ folder is writable, if `save_files: true`
      */
-    private function thumbsFolderCheck()
+    private function thumbsFolderCheck(): void
     {
         if (! $this->boltConfig->get('general/thumbnails/save_files')) {
             return;
@@ -220,21 +220,21 @@ class Checks
     /**
      * Check if the current url matches the canonical.
      */
-    private function canonicalCheck()
+    private function canonicalCheck(): void
     {
         $hostname = parse_url(strtok($this->request->getUri(), '?'));
 
-        if ($hostname['scheme'] != $_SERVER['CANONICAL_SCHEME'] || $hostname['host'] != $_SERVER['CANONICAL_HOST']) {
+        if ($hostname['scheme'] !== $_SERVER['CANONICAL_SCHEME'] || $hostname['host'] !== $_SERVER['CANONICAL_HOST']) {
             $canonical = sprintf('%s://%s', $_SERVER['CANONICAL_SCHEME'], $_SERVER['CANONICAL_HOST']);
             $login = sprintf('%s%s', $canonical, $this->getParameter('bolt.backend_url'));
-            $notice = "The <strong>canonical hostname</strong> is set to <code>$canonical</code> in <code>config.yaml</code>,
+            $notice = "The <strong>canonical hostname</strong> is set to <code>${canonical}</code> in <code>config.yaml</code>,
                 but you are currently logged in using another hostname. This might cause issues with uploaded files, or 
                 links inserted in the content.";
             $info = sprintf(
-                    "Log in on Bolt using the proper URL: <code><a href='%s'>%s</a></code>.",
-                    $login,
-                    $login
-                );
+                "Log in on Bolt using the proper URL: <code><a href='%s'>%s</a></code>.",
+                $login,
+                $login
+            );
 
             $this->setSeverity(1);
             $this->setNotice($notice, $info);
@@ -244,25 +244,25 @@ class Checks
     /**
      * Check if the exif, fileinfo and gd extensions are enabled / compiled into PHP.
      */
-    private function imageFunctionsCheck()
+    private function imageFunctionsCheck(): void
     {
-        if (!extension_loaded('exif') || !function_exists('exif_read_data')) {
+        if (! extension_loaded('exif') || ! function_exists('exif_read_data')) {
             $notice = 'The function <code>exif_read_data</code> does not exist, which means that Bolt can not create thumbnail images.';
-            $info =  "Make sure the <code>php-exif</code> extension is enabled <u>and</u> compiled into your PHP setup. See <a href='http://php.net/manual/en/exif.installation.php'>here</a>.";
+            $info = "Make sure the <code>php-exif</code> extension is enabled <u>and</u> compiled into your PHP setup. See <a href='http://php.net/manual/en/exif.installation.php'>here</a>.";
 
             $this->setSeverity(1);
             $this->setNotice($notice, $info);
         }
 
-        if (!extension_loaded('fileinfo') || !class_exists('finfo')) {
+        if (! extension_loaded('fileinfo') || ! class_exists('finfo')) {
             $notice = 'The class <code>finfo</code> does not exist, which means that Bolt can not create thumbnail images.';
-                $info =  "Make sure the <code>fileinfo</code> extension is enabled <u>and</u> compiled into your PHP setup. See <a href='http://php.net/manual/en/fileinfo.installation.php'>here</a>.";
+            $info = "Make sure the <code>fileinfo</code> extension is enabled <u>and</u> compiled into your PHP setup. See <a href='http://php.net/manual/en/fileinfo.installation.php'>here</a>.";
 
             $this->setSeverity(1);
             $this->setNotice($notice, $info);
         }
 
-        if (!extension_loaded('gd') || !function_exists('gd_info')) {
+        if (! extension_loaded('gd') || ! function_exists('gd_info')) {
             $notice = 'The function <code>gd_info</code> does not exist, which means that Bolt can not create thumbnail images.';
             $info = "Make sure the <code>gd</code> extension is enabled <u>and</u> compiled into your PHP setup. See <a href='http://php.net/manual/en/image.installation.php'>here</a>.";
 
@@ -271,14 +271,13 @@ class Checks
         }
     }
 
-
     /**
      * If the site is in maintenance mode, show this on the dashboard.
      */
-    protected function maintenanceCheck()
+    protected function maintenanceCheck(): void
     {
         if ($this->boltConfig->get('general/maintenance_mode', false)) {
-            $notice =  "Bolt's <strong>maintenance mode</strong> is enabled. This means that non-authenticated users will not be able to see the website.";
+            $notice = "Bolt's <strong>maintenance mode</strong> is enabled. This means that non-authenticated users will not be able to see the website.";
             $info = 'To make the site available to the general public again, set <code>maintenance_mode: false</code> in your <code>config.yaml</code> file.';
 
             $this->setSeverity(1);
