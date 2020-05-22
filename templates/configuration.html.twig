@@ -5,8 +5,10 @@
     </div>
     <div class="card-body">
 
+        <p>Bolt has detected one or more configuration issues. You should resolve these, for optimum performance:</p>
+
         {% for result in results.notices %}
-            <p>{{ result.notice|raw }}
+            <p> - {{ result.notice|raw }}
             {% if result.info %}
             <br><small>{{ result.info|raw }}</small>
             {% endif %}

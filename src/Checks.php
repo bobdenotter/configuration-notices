@@ -49,6 +49,7 @@ class Checks
 
         $this->liveCheck();
         $this->newContentTypeCheck();
+        $this->duplicateTaxonomyAndContentTypeCheck();
         $this->singleHostnameCheck();
         $this->ipAddressCheck();
         $this->topLevelCheck();
@@ -124,6 +125,29 @@ class Checks
         }
     }
 
+    /**
+     * Check whether there is a ContentType and Taxonomy with the same name, because that will confuse routing
+     */
+    private function duplicateTaxonomyAndContentTypeCheck(): void
+    {
+        $configContent = $this->boltConfig->get('contenttypes');
+        $configTaxo = $this->boltConfig->get('taxonomies');
+
+        $contenttypes = collect($configContent->pluck('slug'))->merge($configContent->pluck('singular_slug'))->unique();
+        $taxonomies = collect($configTaxo->pluck('slug'))->merge($configTaxo->pluck('singular_slug'))->unique();
+
+        $overlap = $contenttypes->intersect($taxonomies);
+
+        if ($overlap->isNotEmpty()) {
+            $notice = sprintf("The ContentTypes and Taxonomies contain <strong>overlapping identifiers</strong>: <code>%s</code>.", $overlap->implode('</code>, <code>'));
+            $info = "Edit your <code>contenttypes.yaml</code> or your <code>taxonomies.yaml</code>, to ensure that all the used <code>slug</code>s and <code>singular_slug</code>s are unique.";
+
+            $this->setSeverity(2);
+            $this->setNotice($notice, $info);
+        }
+
+    }
+    
     /**
      * Check whether or not we're running on a hostname without TLD, like 'http://localhost'.
      */
