@@ -95,9 +95,9 @@ class Checks
         $this->setNotice(
             "It seems like this website is running on a <strong>non-development environment</strong>, 
              while development mode is enabled (<code>APP_ENV=dev</code> and/or <code>APP_DEBUG=1</code>). 
-             Make sure debug is disabled in production environments. If you don't do this, it will 
+             Ensure debug is disabled in production environments, otherwise it will 
              result in an extremely large <code>var/cache</code> folder and a measurable reduced 
-             performance across all pages.",
+             performance.",
             "If you wish to hide this message, add a key to your <abbr title='config/extensions/bobdenotter-configurationnotices.yaml'>
              config <code>yaml</code></abbr> file with a (partial) domain name in it, that should be 
              seen as a development environment: <code>local_domains: [ '.foo' ]</code>."
@@ -113,10 +113,11 @@ class Checks
 
         foreach ($this->boltConfig->get('contenttypes') as $contentType) {
             if (! in_array($contentType->get('slug'), $fromParameters, true)) {
+                $notice = sprintf("A <b>new ContentType</b> ('%s') was added. Make sure to <a href='./clearcache'>clear the cache</a>, so it shows up correctly.", $contentType->get('name'));
+                $info = "By clearing the cache, you'll ensure the routing requirements are updated, allowing Bolt to generate the correct links to the new ContentType.";
+
                 $this->setSeverity(3);
-                $this->setNotice(
-                    sprintf("A new ContentType ('%s') was added. Make sure to clear the cache, so it shows up correctly.", $contentType->get('name'))
-                );
+                $this->setNotice($notice, $info);
 
                 return;
             }
