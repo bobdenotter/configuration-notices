@@ -6,9 +6,11 @@ namespace BobdenOtter\ConfigurationNotices;
 
 use Bolt\Canonical;
 use Bolt\Configuration\Config;
+use Bolt\Extension\BaseExtension;
 use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Yaml\Yaml;
 use Tightenco\Collect\Support\Collection;
 
 class Checks
@@ -30,12 +32,16 @@ class Checks
     /** @var Container */
     private $container;
 
-    public function __construct(Config $boltConfig, Request $request, Collection $extensionConfig, Container $container)
+    /** @var BaseExtension */
+    private $extension;
+
+    public function __construct(BaseExtension $extension)
     {
-        $this->boltConfig = $boltConfig;
-        $this->request = $request;
-        $this->extensionConfig = $extensionConfig;
-        $this->container = $container;
+        $this->boltConfig = $extension->getBoltConfig();
+        $this->request = $extension->getRequest();
+        $this->extensionConfig = $extension->getConfig();
+        $this->container = $extension->getContainer();
+        $this->extension = $extension;
     }
 
     public function getResults(): array
@@ -58,6 +64,7 @@ class Checks
         $this->canonicalCheck();
         $this->imageFunctionsCheck();
         $this->maintenanceCheck();
+        $this->servicesCheck();
 
         return [
             'severity' => $this->severity,
@@ -307,6 +314,29 @@ class Checks
 
             $this->setSeverity(1);
             $this->setNotice($notice, $info);
+        }
+    }
+
+    private function servicesCheck()
+    {
+        // This method is only available on 4.0.0 RC 21 and up.
+        if (! method_exists($this->extension, 'getAllServiceNames')) {
+            return;
+        }
+
+        $checkServices = Yaml::parseFile(dirname(__DIR__).'/services.yaml');
+
+        $availableServices = $this->extension->getAllServiceNames();
+
+        foreach ($checkServices as $key => $service) {
+            if (! $availableServices->contains($service['name'])) {
+                $notice = "Bolt's <code>services.yaml</code> is missing the <code>$key</code>. This needs to be added in order to function correctly.";
+                $info = 'To remedy this, edit <code>services.yaml</code> in the <code>config</code> folder and add the following:';
+                $info .= '<pre style="overflow-x: scroll; max-width: 21em; border: 1px solid #EEE; background: #F8F8F8; padding: 0.5rem;">' . $service['code'] . '</pre>';
+
+                $this->setSeverity(3);
+                $this->setNotice($notice, $info);
+            }
         }
     }
 
