@@ -9,10 +9,9 @@
 
         {% for result in results.notices %}
             <p> - {{ result.notice|raw }}
-            {% if result.info %}
-            <br><small>{{ result.info|raw }}</small>
+            {% if result.info %}</p>
+            <small style="padding-top: 0.5rem; display: block;">{{ result.info|raw }}</small>
             {% endif %}
-            </p>
             {% if not loop.last %}<hr>{% endif %}
         {% endfor %}
 

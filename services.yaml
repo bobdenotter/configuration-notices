@@ -1,0 +1,7 @@
+FieldFillListener:
+    name: Bolt\Event\Listener\FieldFillListener
+    code: |
+        Bolt\Event\Listener\FieldFillListener:
+            tags:
+                - { name: doctrine.event_listener, event: postLoad }
+
