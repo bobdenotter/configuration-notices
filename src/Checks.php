@@ -55,6 +55,7 @@ class Checks
 
         $this->liveCheck();
         $this->newContentTypeCheck();
+        $this->fieldTypesCheck();
         $this->duplicateTaxonomyAndContentTypeCheck();
         $this->singleHostnameCheck();
         $this->ipAddressCheck();
@@ -101,11 +102,11 @@ class Checks
 
         $this->setSeverity(2);
         $this->setNotice(
-            "It seems like this website is running on a <strong>non-development environment</strong>, 
+            'It seems like this website is running on a <strong>non-development environment</strong>, 
              while development mode is enabled (<code>APP_ENV=dev</code> and/or <code>APP_DEBUG=1</code>). 
              Ensure debug is disabled in production environments, otherwise it will 
              result in an extremely large <code>var/cache</code> folder and a measurable reduced 
-             performance.",
+             performance.',
             "If you wish to hide this message, add a key to your <abbr title='config/extensions/bobdenotter-configurationnotices.yaml'>
              config <code>yaml</code></abbr> file with a (partial) domain name in it, that should be 
              seen as a development environment: <code>local_domains: [ '.foo' ]</code>."
@@ -133,6 +134,25 @@ class Checks
     }
 
     /**
+     * Check if a field has a non-existing type
+     */
+    private function fieldTypesCheck(): void
+    {
+        foreach ($this->boltConfig->get('contenttypes') as $contentType) {
+            $this->setSeverity(2);
+            foreach ($contentType->get('fields') as $fieldType) {
+                if (! class_exists('\\Bolt\\Entity\\Field\\' . ucwords($fieldType->get('type')) . 'Field')) {
+                    $notice = sprintf("A field of type <code>%s</code> was added to the '%s' ContentType, but this is not a valid field type.", $fieldType->get('type'), $contentType->get('name'));
+                    $info = sprintf('Edit your <code>contenttypes.yaml</code> to ensure that the <code>%s/%s</code> field has a valid type.', $contentType->get('slug'), $fieldType->get('type'));
+
+                    $this->setSeverity(2);
+                    $this->setNotice($notice, $info);
+                }
+            }
+        }
+    }
+
+    /**
      * Check whether there is a ContentType and Taxonomy with the same name, because that will confuse routing
      */
     private function duplicateTaxonomyAndContentTypeCheck(): void
@@ -146,15 +166,14 @@ class Checks
         $overlap = $contenttypes->intersect($taxonomies);
 
         if ($overlap->isNotEmpty()) {
-            $notice = sprintf("The ContentTypes and Taxonomies contain <strong>overlapping identifiers</strong>: <code>%s</code>.", $overlap->implode('</code>, <code>'));
-            $info = "Edit your <code>contenttypes.yaml</code> or your <code>taxonomies.yaml</code>, to ensure that all the used <code>slug</code>s and <code>singular_slug</code>s are unique.";
+            $notice = sprintf('The ContentTypes and Taxonomies contain <strong>overlapping identifiers</strong>: <code>%s</code>.', $overlap->implode('</code>, <code>'));
+            $info = 'Edit your <code>contenttypes.yaml</code> or your <code>taxonomies.yaml</code>, to ensure that all the used <code>slug</code>s and <code>singular_slug</code>s are unique.';
 
             $this->setSeverity(2);
             $this->setNotice($notice, $info);
         }
-
     }
-    
+
     /**
      * Check whether or not we're running on a hostname without TLD, like 'http://localhost'.
      */
@@ -317,20 +336,20 @@ class Checks
         }
     }
 
-    private function servicesCheck()
+    private function servicesCheck(): void
     {
         // This method is only available on 4.0.0 RC 21 and up.
         if (! method_exists($this->extension, 'getAllServiceNames')) {
             return;
         }
 
-        $checkServices = Yaml::parseFile(dirname(__DIR__).'/services.yaml');
+        $checkServices = Yaml::parseFile(dirname(__DIR__) . '/services.yaml');
 
         $availableServices = $this->extension->getAllServiceNames();
 
         foreach ($checkServices as $key => $service) {
             if (! $availableServices->contains($service['name'])) {
-                $notice = "Bolt's <code>services.yaml</code> is missing the <code>$key</code>. This needs to be added in order to function correctly.";
+                $notice = "Bolt's <code>services.yaml</code> is missing the <code>${key}</code>. This needs to be added in order to function correctly.";
                 $info = 'To remedy this, edit <code>services.yaml</code> in the <code>config</code> folder and add the following:';
                 $info .= '<pre style="overflow-x: scroll; max-width: 21em; border: 1px solid #EEE; background: #F8F8F8; padding: 0.5rem;">' . $service['code'] . '</pre>';
 
