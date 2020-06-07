@@ -78,7 +78,7 @@ class Checks
      */
     private function liveCheck(): void
     {
-        if ($this->getParameter('kernel.environment') === 'prod' && $this->getParameter('kernel.debug') !== '1') {
+        if ($this->getParameter('kernel.environment') === 'prod' && $this->getParameter('kernel.debug') !== true) {
             return;
         }
 
@@ -387,7 +387,10 @@ class Checks
         ];
     }
 
-    private function getParameter(string $parameter): ?string
+    /**
+     * @return string|boolean|null
+     */
+    private function getParameter(string $parameter)
     {
         return $this->container->getParameter($parameter);
     }
