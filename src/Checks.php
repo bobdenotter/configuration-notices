@@ -56,6 +56,7 @@ class Checks
         $this->liveCheck();
         $this->newContentTypeCheck();
         $this->fieldTypesCheck();
+        $this->localizedFieldsAndContentLocalesCheck();
         $this->duplicateTaxonomyAndContentTypeCheck();
         $this->singleHostnameCheck();
         $this->ipAddressCheck();
@@ -139,7 +140,6 @@ class Checks
     private function fieldTypesCheck(): void
     {
         foreach ($this->boltConfig->get('contenttypes') as $contentType) {
-            $this->setSeverity(2);
             foreach ($contentType->get('fields') as $fieldType) {
                 if (! class_exists('\\Bolt\\Entity\\Field\\' . ucwords($fieldType->get('type')) . 'Field')) {
                     $notice = sprintf("A field of type <code>%s</code> was added to the '%s' ContentType, but this is not a valid field type.", $fieldType->get('type'), $contentType->get('name'));
@@ -148,6 +148,42 @@ class Checks
                     $this->setSeverity(2);
                     $this->setNotice($notice, $info);
                 }
+            }
+        }
+    }
+
+    private function localizedFieldsAndContentLocalesCheck(): void
+    {
+        $noLocalesCTs = [];
+        $noLocalizedFieldsCTs = [];
+        foreach($this->boltConfig->get('contenttypes') as $contentType) {
+            $contentLocales = $contentType->get('locales', [])->toArray();
+            $localizedFields = $contentType->get('fields')->where('localize', true)->toArray();
+
+            if (empty($contentLocales) && ! empty($localizedFields)) {
+                $noLocalesCTs[ $contentType->get('name') ] = array_keys($localizedFields);
+
+            }
+
+            if (! empty($contentLocales) && empty($localizedFields)) {
+                $noLocalizedFieldsCTs[] = $contentType->get('name');
+            }
+        }
+
+
+        if (! empty($noLocalizedFieldsCTs)) {
+            $this->setSeverity(1);
+            $notice = sprintf("The <code>locales</code> option is set on ContentType(s) <code>%s</code>, but no fields are localized.", implode(", ", $noLocalizedFieldsCTs));
+            $info = "Make sure to update your <code>contenttypes.yaml</code> by removing the <code>locales</code> option <b>or</b> by adding <code>localize: true</code> to fields that can be translated.";
+            $this->setNotice($notice, $info);
+        }
+
+        if (! empty($noLocalesCTs)) {
+            $this->setSeverity(2);
+            foreach($noLocalesCTs as $contentType => $fields) {
+                $notice = sprintf("The <code>localize: true</code> option is set for field(s) <code>%s</code>, but their ContentType <code>%s</code> has no locales set.", implode(" ,", $fields), $contentType);
+                $info = sprintf("Make sure to add the <code>locales</code> option with the enabled languages to the <code>%s</code> ContentType.", $contentType);
+                $this->setNotice($notice, $info);
             }
         }
     }
