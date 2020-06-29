@@ -7,6 +7,7 @@ namespace BobdenOtter\ConfigurationNotices;
 use Bolt\Canonical;
 use Bolt\Configuration\Config;
 use Bolt\Extension\BaseExtension;
+use ComposerPackages\Packages;
 use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\Request;
@@ -67,6 +68,7 @@ class Checks
         $this->imageFunctionsCheck();
         $this->maintenanceCheck();
         $this->servicesCheck();
+        $this->symfonyVersionCheck();
 
         return [
             'severity' => $this->severity,
@@ -103,13 +105,13 @@ class Checks
 
         $this->setSeverity(2);
         $this->setNotice(
-            'It seems like this website is running on a <strong>non-development environment</strong>, 
-             while development mode is enabled (<code>APP_ENV=dev</code> and/or <code>APP_DEBUG=1</code>). 
-             Ensure debug is disabled in production environments, otherwise it will 
-             result in an extremely large <code>var/cache</code> folder and a measurable reduced 
+            'It seems like this website is running on a <strong>non-development environment</strong>,
+             while development mode is enabled (<code>APP_ENV=dev</code> and/or <code>APP_DEBUG=1</code>).
+             Ensure debug is disabled in production environments, otherwise it will
+             result in an extremely large <code>var/cache</code> folder and a measurable reduced
              performance.',
             "If you wish to hide this message, add a key to your <abbr title='config/extensions/bobdenotter-configurationnotices.yaml'>
-             config <code>yaml</code></abbr> file with a (partial) domain name in it, that should be 
+             config <code>yaml</code></abbr> file with a (partial) domain name in it, that should be
              seen as a development environment: <code>local_domains: [ '.foo' ]</code>."
         );
     }
@@ -156,13 +158,12 @@ class Checks
     {
         $noLocalesCTs = [];
         $noLocalizedFieldsCTs = [];
-        foreach($this->boltConfig->get('contenttypes') as $contentType) {
+        foreach ($this->boltConfig->get('contenttypes') as $contentType) {
             $contentLocales = $contentType->get('locales', [])->toArray();
             $localizedFields = $contentType->get('fields')->where('localize', true)->toArray();
 
             if (empty($contentLocales) && ! empty($localizedFields)) {
-                $noLocalesCTs[ $contentType->get('name') ] = array_keys($localizedFields);
-
+                $noLocalesCTs[$contentType->get('name')] = array_keys($localizedFields);
             }
 
             if (! empty($contentLocales) && empty($localizedFields)) {
@@ -170,19 +171,18 @@ class Checks
             }
         }
 
-
         if (! empty($noLocalizedFieldsCTs)) {
             $this->setSeverity(1);
-            $notice = sprintf("The <code>locales</code> option is set on ContentType(s) <code>%s</code>, but no fields are localized.", implode(", ", $noLocalizedFieldsCTs));
-            $info = "Make sure to update your <code>contenttypes.yaml</code> by removing the <code>locales</code> option <b>or</b> by adding <code>localize: true</code> to fields that can be translated.";
+            $notice = sprintf('The <code>locales</code> option is set on ContentType(s) <code>%s</code>, but no fields are localized.', implode(', ', $noLocalizedFieldsCTs));
+            $info = 'Make sure to update your <code>contenttypes.yaml</code> by removing the <code>locales</code> option <b>or</b> by adding <code>localize: true</code> to fields that can be translated.';
             $this->setNotice($notice, $info);
         }
 
         if (! empty($noLocalesCTs)) {
             $this->setSeverity(2);
-            foreach($noLocalesCTs as $contentType => $fields) {
-                $notice = sprintf("The <code>localize: true</code> option is set for field(s) <code>%s</code>, but their ContentType <code>%s</code> has no locales set.", implode(" ,", $fields), $contentType);
-                $info = sprintf("Make sure to add the <code>locales</code> option with the enabled languages to the <code>%s</code> ContentType.", $contentType);
+            foreach ($noLocalesCTs as $contentType => $fields) {
+                $notice = sprintf('The <code>localize: true</code> option is set for field(s) <code>%s</code>, but their ContentType <code>%s</code> has no locales set.', implode(' ,', $fields), $contentType);
+                $info = sprintf('Make sure to add the <code>locales</code> option with the enabled languages to the <code>%s</code> ContentType.', $contentType);
                 $this->setNotice($notice, $info);
             }
         }
@@ -251,7 +251,7 @@ class Checks
 
         if (! empty($base)) {
             $notice = 'You are using Bolt in a subfolder, <strong>instead of the webroot</strong>.';
-            $info = "It is recommended to use Bolt from the 'web root', so that it is in the top level. If you wish to 
+            $info = "It is recommended to use Bolt from the 'web root', so that it is in the top level. If you wish to
                 use Bolt for only part of a website, we recommend setting up a subdomain like <code>news.example.org</code>.";
 
             $this->setSeverity(1);
@@ -315,7 +315,7 @@ class Checks
             $canonical = sprintf('%s://%s', $_SERVER['CANONICAL_SCHEME'], $_SERVER['CANONICAL_HOST']);
             $login = sprintf('%s%s', $canonical, $this->getParameter('bolt.backend_url'));
             $notice = "The <strong>canonical hostname</strong> is set to <code>${canonical}</code> in <code>config.yaml</code>,
-                but you are currently logged in using another hostname. This might cause issues with uploaded files, or 
+                but you are currently logged in using another hostname. This might cause issues with uploaded files, or
                 links inserted in the content.";
             $info = sprintf(
                 "Log in on Bolt using the proper URL: <code><a href='%s'>%s</a></code>.",
@@ -395,6 +395,25 @@ class Checks
         }
     }
 
+    private function symfonyVersionCheck(): void
+    {
+        $version = Packages::symfonyFrameworkBundle()->getVersion();
+
+        if ($version < '5.0.0.0') {
+            $code = '"extra": {
+    "symfony": {
+        "allow-contrib": true,
+        "require": "^5.1"
+    },';
+            $notice = 'Bolt is currently running on Symfony 4. To bump the version to Symfony 5.1, edit <code>composer.json</code> in the project root folder and set the following:';
+            $info = '<pre style="overflow-x: scroll; max-width: 21em; border: 1px solid #EEE; background: #F8F8F8; padding: 0.5rem;">' . $code . '</pre>';
+            $info .= 'Run <code>composer update</code> to do the upgrade to Symfony 5.1.';
+
+            $this->setSeverity(3);
+            $this->setNotice($notice, $info);
+        }
+    }
+
     private function isWritable($fileSystem, $filename): bool
     {
         $filePath = $this->boltConfig->getPath($fileSystem) . $filename;
@@ -424,7 +443,7 @@ class Checks
     }
 
     /**
-     * @return string|boolean|null
+     * @return string|bool|null
      */
     private function getParameter(string $parameter)
     {
