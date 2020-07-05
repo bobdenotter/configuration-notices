@@ -389,7 +389,6 @@ class Checks
             $info = '<pre>use Symfony\Component\Debug\Debug;</pre>';
             $info .= 'With: ';
             $info .= '<pre>use Symfony\Component\ErrorHandler\Debug;</pre>';
-            $info .= 'Run <code>composer update</code> to do the upgrade to Symfony 5.1.';
 
             $this->setNotice(2, $notice, $info);
         }
