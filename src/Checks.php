@@ -56,6 +56,7 @@ class Checks
         $this->liveCheck();
         $this->newContentTypeCheck();
         $this->fieldTypesCheck();
+        $this->fieldContentInsideSetCheck();
         $this->localizedFieldsAndContentLocalesCheck();
         $this->duplicateTaxonomyAndContentTypeCheck();
         $this->singleHostnameCheck();
@@ -152,6 +153,31 @@ class Checks
         }
     }
 
+    private function fieldContentInsideSetCheck(): void
+    {
+
+        foreach ($this->boltConfig->get('contenttypes') as $contentType) {
+            $fieldsToCheck = $contentType->get('fields')->toArray();
+
+            while( !empty($fieldsToCheck)) {
+                $field = array_pop($fieldsToCheck);
+
+                if ($field['type'] === 'set') {
+                    if (in_array('content', array_keys($field['fields']))) {
+                        $notice = sprintf("A field with name <code>content</code> was found inside the <code>%s</code> Set field.", $field['label']);
+                        $info = sprintf("You should not use a <code>content</code> field inside a set. Please rename it.");
+
+                        $this->setNotice(2, $notice, $info);
+                    }
+                } else if ($field['type'] === 'collection') {
+                    foreach($field['fields'] as $subfields) {
+                        $fieldsToCheck[] = $subfields;
+                    }
+                }
+            }
+        }
+    }
+
     private function localizedFieldsAndContentLocalesCheck(): void
     {
         $noLocalesCTs = [];
@@ -176,11 +202,10 @@ class Checks
         }
 
         if (! empty($noLocalesCTs)) {
-            $this->setSeverity(2);
             foreach ($noLocalesCTs as $contentType => $fields) {
                 $notice = sprintf('The <code>localize: true</code> option is set for field(s) <code>%s</code>, but their ContentType <code>%s</code> has no locales set.', implode(' ,', $fields), $contentType);
                 $info = sprintf('Make sure to add the <code>locales</code> option with the enabled languages to the <code>%s</code> ContentType.', $contentType);
-                $this->setNotice($notice, $info);
+                $this->setNotice(2, $notice, $info);
             }
         }
     }
