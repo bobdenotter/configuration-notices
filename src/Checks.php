@@ -40,6 +40,12 @@ class Checks
     /** @var FieldRepository */
     private $fieldRepository;
 
+    private $levels = [
+        1 => 'info',
+        2 => 'warning',
+        3 => 'danger',
+    ];
+
     public function __construct(BaseExtension $extension)
     {
         $this->boltConfig = $extension->getBoltConfig();
@@ -52,16 +58,10 @@ class Checks
 
     public function getResults(): array
     {
-        if ($this->request->get('_route') !== 'bolt_dashboard') {
-            return [
-                'severity' => 0,
-                'notices' => null,
-            ];
-        }
-
         $this->liveCheck();
         $this->newContentTypeCheck();
         $this->fieldTypesCheck();
+        $this->fieldContentInsideSetCheck();
         $this->localizedFieldsAndContentLocalesCheck();
         $this->duplicateTaxonomyAndContentTypeCheck();
         $this->singleHostnameCheck();
@@ -74,6 +74,7 @@ class Checks
         $this->maintenanceCheck();
         $this->servicesCheck();
         $this->symfonyVersionCheck();
+        $this->checkDeprecatedDebug();
 
         return [
             'severity' => $this->severity,
@@ -108,8 +109,8 @@ class Checks
             }
         }
 
-        $this->setSeverity(2);
         $this->setNotice(
+            2,
             'It seems like this website is running on a <strong>non-development environment</strong>,
              while development mode is enabled (<code>APP_ENV=dev</code> and/or <code>APP_DEBUG=1</code>).
              Ensure debug is disabled in production environments, otherwise it will
@@ -133,8 +134,7 @@ class Checks
                 $notice = sprintf("A <b>new ContentType</b> ('%s') was added. Make sure to <a href='./clearcache'>clear the cache</a>, so it shows up correctly.", $contentType->get('name'));
                 $info = "By clearing the cache, you'll ensure the routing requirements are updated, allowing Bolt to generate the correct links to the new ContentType.";
 
-                $this->setSeverity(3);
-                $this->setNotice($notice, $info);
+                $this->setNotice(3, $notice, $info);
 
                 return;
             }
@@ -152,8 +152,32 @@ class Checks
                     $notice = sprintf("A field of type <code>%s</code> was added to the '%s' ContentType, but this is not a valid field type.", $fieldType->get('type'), $contentType->get('name'));
                     $info = sprintf('Edit your <code>contenttypes.yaml</code> to ensure that the <code>%s/%s</code> field has a valid type.', $contentType->get('slug'), $fieldType->get('type'));
 
-                    $this->setSeverity(2);
-                    $this->setNotice($notice, $info);
+                    $this->setNotice(1, $notice, $info);
+                }
+            }
+        }
+    }
+
+    private function fieldContentInsideSetCheck(): void
+    {
+
+        foreach ($this->boltConfig->get('contenttypes') as $contentType) {
+            $fieldsToCheck = $contentType->get('fields')->toArray();
+
+            while( !empty($fieldsToCheck)) {
+                $field = array_pop($fieldsToCheck);
+
+                if ($field['type'] === 'set') {
+                    if (in_array('content', array_keys($field['fields']))) {
+                        $notice = sprintf("A field with name <code>content</code> was found inside the <code>%s</code> Set field.", $field['label']);
+                        $info = sprintf("You should not use a <code>content</code> field inside a set. Please rename it.");
+
+                        $this->setNotice(2, $notice, $info);
+                    }
+                } else if ($field['type'] === 'collection') {
+                    foreach($field['fields'] as $subfields) {
+                        $fieldsToCheck[] = $subfields;
+                    }
                 }
             }
         }
@@ -177,18 +201,16 @@ class Checks
         }
 
         if (! empty($noLocalizedFieldsCTs)) {
-            $this->setSeverity(1);
             $notice = sprintf('The <code>locales</code> option is set on ContentType(s) <code>%s</code>, but no fields are localized.', implode(', ', $noLocalizedFieldsCTs));
             $info = 'Make sure to update your <code>contenttypes.yaml</code> by removing the <code>locales</code> option <b>or</b> by adding <code>localize: true</code> to fields that can be translated.';
-            $this->setNotice($notice, $info);
+            $this->setNotice(1, $notice, $info);
         }
 
         if (! empty($noLocalesCTs)) {
-            $this->setSeverity(2);
             foreach ($noLocalesCTs as $contentType => $fields) {
                 $notice = sprintf('The <code>localize: true</code> option is set for field(s) <code>%s</code>, but their ContentType <code>%s</code> has no locales set.', implode(' ,', $fields), $contentType);
                 $info = sprintf('Make sure to add the <code>locales</code> option with the enabled languages to the <code>%s</code> ContentType.', $contentType);
-                $this->setNotice($notice, $info);
+                $this->setNotice(2, $notice, $info);
             }
         }
     }
@@ -210,8 +232,7 @@ class Checks
             $notice = sprintf('The ContentTypes and Taxonomies contain <strong>overlapping identifiers</strong>: <code>%s</code>.', $overlap->implode('</code>, <code>'));
             $info = 'Edit your <code>contenttypes.yaml</code> or your <code>taxonomies.yaml</code>, to ensure that all the used <code>slug</code>s and <code>singular_slug</code>s are unique.';
 
-            $this->setSeverity(2);
-            $this->setNotice($notice, $info);
+            $this->setNotice(2, $notice, $info);
         }
     }
 
@@ -226,8 +247,7 @@ class Checks
             $notice = "You are using <code>${hostname}</code> as host name. Some browsers have problems with sessions on hostnames that do not have a <code>.tld</code> in them.";
             $info = 'If you experience difficulties logging on, either configure your webserver to use a hostname with a dot in it, or use another browser.';
 
-            $this->setSeverity(1);
-            $this->setNotice($notice, $info);
+            $this->setNotice(1, $notice, $info);
         }
     }
 
@@ -242,8 +262,7 @@ class Checks
             $notice = "You are using the <strong>IP address</strong> <code>${hostname}</code> as host name. This is known to cause problems with sessions on certain browsers.";
             $info = 'If you experience difficulties logging on, either configure your webserver to use a proper hostname, or use another browser.';
 
-            $this->setSeverity(1);
-            $this->setNotice($notice, $info);
+            $this->setNotice(1, $notice, $info);
         }
     }
 
@@ -259,8 +278,7 @@ class Checks
             $info = "It is recommended to use Bolt from the 'web root', so that it is in the top level. If you wish to
                 use Bolt for only part of a website, we recommend setting up a subdomain like <code>news.example.org</code>.";
 
-            $this->setSeverity(1);
-            $this->setNotice($notice, $info);
+            $this->setNotice(1, $notice, $info);
         }
     }
 
@@ -283,8 +301,7 @@ class Checks
                 $notice = 'Bolt needs to be able to <strong>write files to</strong> the "' . $fileSystem . '" folder, but it doesn\'t seem to be writable.';
                 $info = 'Make sure the folder <code>' . $folderName . '</code> exists, and is writable to the webserver.';
 
-                $this->setSeverity(2);
-                $this->setNotice($notice, $info);
+                $this->setNotice(2, $notice, $info);
             }
         }
     }
@@ -304,8 +321,7 @@ class Checks
             $notice = "Bolt is configured to save thumbnails to disk for performance, but the <code>thumbs/</code> folder doesn't seem to be writable.";
             $info = 'Make sure the folder exists, and is writable to the webserver.';
 
-            $this->setSeverity(2);
-            $this->setNotice($notice, $info);
+            $this->setNotice(2, $notice, $info);
         }
     }
 
@@ -328,8 +344,7 @@ class Checks
                 $login
             );
 
-            $this->setSeverity(1);
-            $this->setNotice($notice, $info);
+            $this->setNotice(1, $notice, $info);
         }
     }
 
@@ -342,24 +357,21 @@ class Checks
             $notice = 'The function <code>exif_read_data</code> does not exist, which means that Bolt can not create thumbnail images.';
             $info = "Make sure the <code>php-exif</code> extension is enabled <u>and</u> compiled into your PHP setup. See <a href='http://php.net/manual/en/exif.installation.php'>here</a>.";
 
-            $this->setSeverity(1);
-            $this->setNotice($notice, $info);
+            $this->setNotice(1, $notice, $info);
         }
 
         if (! extension_loaded('fileinfo') || ! class_exists('finfo')) {
             $notice = 'The class <code>finfo</code> does not exist, which means that Bolt can not create thumbnail images.';
             $info = "Make sure the <code>fileinfo</code> extension is enabled <u>and</u> compiled into your PHP setup. See <a href='http://php.net/manual/en/fileinfo.installation.php'>here</a>.";
 
-            $this->setSeverity(1);
-            $this->setNotice($notice, $info);
+            $this->setNotice(1, $notice, $info);
         }
 
         if (! extension_loaded('gd') || ! function_exists('gd_info')) {
             $notice = 'The function <code>gd_info</code> does not exist, which means that Bolt can not create thumbnail images.';
             $info = "Make sure the <code>gd</code> extension is enabled <u>and</u> compiled into your PHP setup. See <a href='http://php.net/manual/en/image.installation.php'>here</a>.";
 
-            $this->setSeverity(1);
-            $this->setNotice($notice, $info);
+            $this->setNotice(1, $notice, $info);
         }
     }
 
@@ -372,8 +384,7 @@ class Checks
             $notice = "Bolt's <strong>maintenance mode</strong> is enabled. This means that non-authenticated users will not be able to see the website.";
             $info = 'To make the site available to the general public again, set <code>maintenance_mode: false</code> in your <code>config.yaml</code> file.';
 
-            $this->setSeverity(1);
-            $this->setNotice($notice, $info);
+            $this->setNotice(1, $notice, $info);
         }
     }
 
@@ -392,16 +403,33 @@ class Checks
             if (! $availableServices->contains($service['name'])) {
                 $notice = "Bolt's <code>services.yaml</code> is missing the <code>${key}</code>. This needs to be added in order to function correctly.";
                 $info = 'To remedy this, edit <code>services.yaml</code> in the <code>config</code> folder and add the following:';
-                $info .= '<pre style="overflow-x: scroll; max-width: 21em; border: 1px solid #EEE; background: #F8F8F8; padding: 0.5rem;">' . $service['code'] . '</pre>';
+                $info .= '<pre>' . $service['code'] . '</pre>';
 
-                $this->setSeverity(3);
-                $this->setNotice($notice, $info);
+                $this->setNotice(1, $notice, $info);
             }
+        }
+    }
+
+    private function checkDeprecatedDebug(): void
+    {
+        if ($this->indexHasDeprecatedDebug()) {
+            $filename = '…/' . basename($this->boltConfig->getPath('web')) . '/index.php';
+
+            $notice = 'This site is using a deprecated Symfony error handler. To remedy this, edit <code>' . $filename . '</code> and replace:';
+            $info = '<pre>use Symfony\Component\Debug\Debug;</pre>';
+            $info .= 'With: ';
+            $info .= '<pre>use Symfony\Component\ErrorHandler\Debug;</pre>';
+
+            $this->setNotice(2, $notice, $info);
         }
     }
 
     private function symfonyVersionCheck(): void
     {
+        // Leave early, because we only want to show this if the Deprecated Debug has been solved first.
+        if ($this->indexHasDeprecatedDebug()) {
+            return;
+        }
         $version = Packages::symfonyFrameworkBundle()->getVersion();
 
         if ($version < '5.0.0.0') {
@@ -410,13 +438,21 @@ class Checks
         "allow-contrib": true,
         "require": "^5.1"
     },';
-            $notice = 'Bolt is currently running on Symfony 4. To bump the version to Symfony 5.1, edit <code>composer.json</code> in the project root folder and set the following:';
-            $info = '<pre style="overflow-x: scroll; max-width: 21em; border: 1px solid #EEE; background: #F8F8F8; padding: 0.5rem;">' . $code . '</pre>';
+            $notice = 'Bolt is currently running on Symfony 4. To bump the version to <strong>Symfony 5.1</strong>, edit <code>composer.json</code> in the project root folder and set the following:';
+            $info = '<pre>' . $code . '</pre>';
             $info .= 'Run <code>composer update</code> to do the upgrade to Symfony 5.1.';
 
-            $this->setSeverity(3);
-            $this->setNotice($notice, $info);
+            $this->setNotice(1, $notice, $info);
         }
+    }
+
+    private function indexHasDeprecatedDebug(): bool
+    {
+        $filename = $this->boltConfig->getPath('web') . '/index.php';
+
+        $file = file_get_contents($filename);
+
+        return mb_strpos($file, 'Symfony\Component\Debug\Debug') !== false;
     }
 
     private function isWritable($fileSystem, $filename): bool
@@ -439,9 +475,12 @@ class Checks
         $this->severity = max($severity, $this->severity);
     }
 
-    private function setNotice(string $notice, ?string $info = null): void
+    private function setNotice(int $severity, string $notice, ?string $info = null): void
     {
+        $this->setSeverity($severity);
+
         $this->notices[] = [
+            'severity' => $this->levels[$severity],
             'notice' => $notice,
             'info' => $info,
         ];
