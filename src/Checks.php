@@ -7,6 +7,7 @@ namespace BobdenOtter\ConfigurationNotices;
 use Bolt\Canonical;
 use Bolt\Configuration\Config;
 use Bolt\Extension\BaseExtension;
+use Bolt\Repository\FieldRepository;
 use ComposerPackages\Packages;
 use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\Filesystem\Filesystem;
@@ -36,6 +37,9 @@ class Checks
     /** @var BaseExtension */
     private $extension;
 
+    /** @var FieldRepository */
+    private $fieldRepository;
+
     public function __construct(BaseExtension $extension)
     {
         $this->boltConfig = $extension->getBoltConfig();
@@ -43,6 +47,7 @@ class Checks
         $this->extensionConfig = $extension->getConfig();
         $this->container = $extension->getContainer();
         $this->extension = $extension;
+        $this->fieldRepository = $extension->getService(FieldRepository::class);
     }
 
     public function getResults(): array
@@ -143,7 +148,7 @@ class Checks
     {
         foreach ($this->boltConfig->get('contenttypes') as $contentType) {
             foreach ($contentType->get('fields') as $fieldType) {
-                if (! class_exists('\\Bolt\\Entity\\Field\\' . ucwords($fieldType->get('type')) . 'Field')) {
+                if (! $this->fieldRepository::getFieldClassname($fieldType->get('type'))) {
                     $notice = sprintf("A field of type <code>%s</code> was added to the '%s' ContentType, but this is not a valid field type.", $fieldType->get('type'), $contentType->get('name'));
                     $info = sprintf('Edit your <code>contenttypes.yaml</code> to ensure that the <code>%s/%s</code> field has a valid type.', $contentType->get('slug'), $fieldType->get('type'));
 
