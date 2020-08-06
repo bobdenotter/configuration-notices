@@ -17,7 +17,7 @@ use Tightenco\Collect\Support\Collection;
 
 class Checks
 {
-    protected $defaultDomainPartials = ['.dev', 'dev.', 'devel.', 'development.', 'test.', '.test', 'new.', '.new', '.local', 'local.', '.wip'];
+    protected $defaultDomainPartials = ['.dev', 'dev.', 'devel.', 'development.', 'test.', '.test', 'new.', '.new', '.local', 'local.', '.wip', 'localhost'];
 
     /** @var Config */
     private $boltConfig;
