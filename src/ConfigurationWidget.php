@@ -25,7 +25,7 @@ class ConfigurationWidget extends BaseWidget implements TwigAwareInterface, Requ
     protected $priority = 100;
     protected $template = '@configuration-notices-widget/configuration.html.twig';
     protected $zone = RequestZone::BACKEND;
-    protected $cacheDuration = 300;
+    protected $cacheDuration = 60;
 
     protected function run(array $params = []): ?string
     {

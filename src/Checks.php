@@ -160,22 +160,21 @@ class Checks
 
     private function fieldContentInsideSetCheck(): void
     {
-
         foreach ($this->boltConfig->get('contenttypes') as $contentType) {
             $fieldsToCheck = $contentType->get('fields')->toArray();
 
-            while( !empty($fieldsToCheck)) {
+            while (! empty($fieldsToCheck)) {
                 $field = array_pop($fieldsToCheck);
 
                 if ($field['type'] === 'set') {
-                    if (in_array('content', array_keys($field['fields']))) {
-                        $notice = sprintf("A field with name <code>content</code> was found inside the <code>%s</code> Set field.", $field['label']);
-                        $info = sprintf("You should not use a <code>content</code> field inside a set. Please rename it.");
+                    if (in_array('content', array_keys($field['fields']), true)) {
+                        $notice = sprintf('A field with name <code>content</code> was found inside the <code>%s</code> Set field.', $field['label']);
+                        $info = sprintf('You should not use a <code>content</code> field inside a set. Please rename it.');
 
                         $this->setNotice(2, $notice, $info);
                     }
-                } else if ($field['type'] === 'collection') {
-                    foreach($field['fields'] as $subfields) {
+                } elseif ($field['type'] === 'collection') {
+                    foreach ($field['fields'] as $subfields) {
                         $fieldsToCheck[] = $subfields;
                     }
                 }
