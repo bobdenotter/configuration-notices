@@ -60,7 +60,9 @@ class Checks
     {
         $this->liveCheck();
         $this->newContentTypeCheck();
-        $this->fieldTypesCheck();
+        // @todo Figure out why this field if giving weird results sometimes.
+        // @see https://github.com/bolt/core/issues/1784
+        // $this->fieldTypesCheck();
         $this->fieldContentInsideSetCheck();
         $this->localizedFieldsAndContentLocalesCheck();
         $this->duplicateTaxonomyAndContentTypeCheck();
