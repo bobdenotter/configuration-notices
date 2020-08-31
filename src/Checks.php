@@ -56,13 +56,15 @@ class Checks
         $this->fieldRepository = $extension->getService(FieldRepository::class);
     }
 
-    public function getResults(): array
+    public function getResults(): ?array
     {
+        if (! $this->isReady()) {
+            return null;
+        }
+
         $this->liveCheck();
         $this->newContentTypeCheck();
-        // @todo Figure out why this field if giving weird results sometimes.
-        // @see https://github.com/bolt/core/issues/1784
-        // $this->fieldTypesCheck();
+        $this->fieldTypesCheck();
         $this->fieldContentInsideSetCheck();
         $this->localizedFieldsAndContentLocalesCheck();
         $this->duplicateTaxonomyAndContentTypeCheck();
@@ -82,6 +84,17 @@ class Checks
             'severity' => $this->severity,
             'notices' => $this->notices,
         ];
+    }
+
+    /**
+     * We check if a common field 'text' actually "exists". If it doesn't, we're
+     * too early in the Request/Response cycle, and we bail out, so we can try
+     * running it again later.
+     * (Because all widgets are run twice, for some obscure reason)
+     */
+    private function isReady(): ?string
+    {
+        return $this->fieldRepository::getFieldClassname('text');
     }
 
     /**

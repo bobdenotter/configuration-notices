@@ -15,9 +15,8 @@ use Bolt\Widget\StopwatchAwareInterface;
 use Bolt\Widget\StopwatchTrait;
 use Bolt\Widget\TwigAwareInterface;
 
-class ConfigurationWidget extends BaseWidget implements TwigAwareInterface, RequestAwareInterface, CacheAwareInterface, StopwatchAwareInterface
+class ConfigurationWidget extends BaseWidget implements TwigAwareInterface, RequestAwareInterface, StopwatchAwareInterface
 {
-    use CacheTrait;
     use StopwatchTrait;
 
     protected $name = 'Configuration Notices Widget';
@@ -25,7 +24,6 @@ class ConfigurationWidget extends BaseWidget implements TwigAwareInterface, Requ
     protected $priority = 100;
     protected $template = '@configuration-notices-widget/configuration.html.twig';
     protected $zone = RequestZone::BACKEND;
-    protected $cacheDuration = 60;
 
     protected function run(array $params = []): ?string
     {
@@ -35,8 +33,14 @@ class ConfigurationWidget extends BaseWidget implements TwigAwareInterface, Requ
         $checks = new Checks($extension);
         $results = $checks->getResults();
 
-        if (empty($results['notices'])) {
+        // This is the case when getResults failed executing
+        if ($results === null) {
             return null;
+        }
+
+        // This is the case when getResults has no outstanding issues
+        if (empty($results['notices'])) {
+            return '';
         }
 
         $context = [
