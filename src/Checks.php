@@ -6,6 +6,7 @@ namespace BobdenOtter\ConfigurationNotices;
 
 use Bolt\Canonical;
 use Bolt\Configuration\Config;
+use Bolt\Configuration\Content\ContentType;
 use Bolt\Extension\BaseExtension;
 use Bolt\Repository\FieldRepository;
 use ComposerPackages\Packages;
@@ -64,6 +65,7 @@ class Checks
 
         $this->liveCheck();
         $this->newContentTypeCheck();
+        $this->slugUsesCheck();
         $this->fieldTypesCheck();
         $this->fieldContentInsideSetCheck();
         $this->localizedFieldsAndContentLocalesCheck();
@@ -152,6 +154,26 @@ class Checks
                 $this->setNotice(3, $notice, $info);
 
                 return;
+            }
+        }
+    }
+
+    /**
+     * Check if the ContentType's Slug field's "uses" isn't set to a non-existing field
+     */
+    private function slugUsesCheck(): void
+    {
+        foreach ($this->boltConfig->get('contenttypes') as $contentType) {
+            $fields = $contentType->get('fields');
+            foreach ($fields->get('slug')->get('uses')->all() as $fieldName) {
+                if (! $fields->has($fieldName)) {
+                    $notice = sprintf('The <b>ContentType %s</b> has an incorrectly defined <code>slug</code>. It refers to <code>%s</code>, but there is no such Field defined.', $contentType->get('name'), $fieldName);
+                    $info = 'Make sure to define the <code>uses:</code> attribute of the <code>slug</code> Field refers to existing Fields.';
+
+                    $this->setNotice(2, $notice, $info);
+
+                    return;
+                }
             }
         }
     }
@@ -466,7 +488,8 @@ class Checks
 
         $file = file_get_contents($filename);
 
-        return mb_strpos($file, 'Symfony\Component\Debug\Debug') !== false;
+        // We split the string below, so ECS doesn't "helpfully" substitute it for the classname.
+        return mb_strpos($file, 'Symfony\Compo' . 'nent\Debug\Debug') !== false;
     }
 
     private function isWritable($fileSystem, $filename): bool

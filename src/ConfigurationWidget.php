@@ -6,8 +6,6 @@ namespace BobdenOtter\ConfigurationNotices;
 
 use Bolt\Extension\BaseExtension;
 use Bolt\Widget\BaseWidget;
-use Bolt\Widget\CacheAwareInterface;
-use Bolt\Widget\CacheTrait;
 use Bolt\Widget\Injector\AdditionalTarget;
 use Bolt\Widget\Injector\RequestZone;
 use Bolt\Widget\RequestAwareInterface;
