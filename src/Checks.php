@@ -81,6 +81,7 @@ class Checks
         $this->servicesCheck();
         $this->symfonyVersionCheck();
         $this->checkDeprecatedDebug();
+        $this->checkDoctrineMissingJsonGetText();
 
         return [
             'severity' => $this->severity,
@@ -457,6 +458,25 @@ class Checks
             $info .= '<pre>use Symfony\Component\ErrorHandler\Debug;</pre>';
 
             $this->setNotice(2, $notice, $info);
+        }
+    }
+
+    /**
+     * Checks if a BC introduced in 4.1 in doctrine.yaml is fixed (manually).
+     */
+    private function checkDoctrineMissingJsonGetText()
+    {
+        $projectDir = $this->container->get('kernel')->getprojectDir();
+        $doctrine = Yaml::parseFile($projectDir. DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'packages'. DIRECTORY_SEPARATOR .'doctrine.yaml');
+
+        $functions = $doctrine['doctrine']['orm']['dql']['string_functions'];
+
+        if (! array_key_exists('JSON_GET_TEXT', $functions)) {
+            $notice = "The <code>JSON_TEXT_FUNCTION</code> is missing from your <code>config/packages/doctrine.yaml</code> definition.";
+            $info = "To resolve this, modify your <code>doctrine.yaml</code> file according to the changes on the ";
+            $info .= "<a href='https://github.com/bolt/project/pull/35/files'>bolt/project</a> repository.";
+
+            $this->setNotice(3, $notice, $info);
         }
     }
 
