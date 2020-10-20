@@ -7,6 +7,7 @@ namespace BobdenOtter\ConfigurationNotices;
 use Bolt\Canonical;
 use Bolt\Configuration\Config;
 use Bolt\Configuration\Content\ContentType;
+use Bolt\Entity\Field;
 use Bolt\Extension\BaseExtension;
 use Bolt\Repository\FieldRepository;
 use ComposerPackages\Packages;
@@ -164,16 +165,27 @@ class Checks
      */
     private function slugUsesCheck(): void
     {
+        $info = 'Make sure to define the <code>uses:</code> attribute of the <code>slug</code>. It should refer to existing Fields.';
+
         foreach ($this->boltConfig->get('contenttypes') as $contentType) {
             $fields = $contentType->get('fields');
-            foreach ($fields->get('slug')->get('uses')->all() as $fieldName) {
-                if (! $fields->has($fieldName)) {
-                    $notice = sprintf('The <b>ContentType %s</b> has an incorrectly defined <code>slug</code>. It refers to <code>%s</code>, but there is no such Field defined.', $contentType->get('name'), $fieldName);
-                    $info = 'Make sure to define the <code>uses:</code> attribute of the <code>slug</code> Field refers to existing Fields.';
+            $slugs = $fields->filter(function(Collection $field) {
+                return $field->get('type') === 'slug';
+            });
 
+            foreach($slugs as $name => $slug) {
+                if (! $slug->has('uses')) {
+                    $notice = sprintf("The <b>ContentType %s</b> has a slug field '%s', which does not define the <code>uses</code> attribute.", $contentType->get('name'), $name);
                     $this->setNotice(2, $notice, $info);
+                    continue 2; // apply continue to nested loop.
+                }
 
-                    return;
+                foreach($slug->get('uses')->all() as $fieldName) {
+                    if (!$fields->has($fieldName)) {
+                        $notice = sprintf('The <b>ContentType %s</b> has an incorrectly defined <code>slug</code>. It refers to <code>%s</code>, but there is no such Field defined.', $contentType->get('name'), $fieldName);
+                        $this->setNotice(2, $notice, $info);
+                        continue 2; // apply continue to nested loop.
+                    }
                 }
             }
         }
