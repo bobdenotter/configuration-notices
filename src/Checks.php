@@ -48,6 +48,45 @@ class Checks
         3 => 'danger',
     ];
 
+    private $generalForbiddenFieldNames = [
+        'id',
+        'definitionfromcontenttypeconfig',
+        'twig',
+        'definiiton',
+        'icon',
+        'author',
+        'status',
+        'createdat',
+        'modifiedat',
+        'publishedat',
+        'depublishedat',
+        'fields',
+        'field',
+        'statuses',
+        'authorname',
+        'taxonomies',
+        'array'
+    ];
+
+    private $setForbiddenFieldNames = [
+        'id',
+        'definition',
+        'name',
+        'apivalue',
+        'value',
+        'defaultvalue',
+        'new',
+        'parsedvalue',
+        'twigvalue',
+        'sortorder',
+        'locale',
+        'version',
+        'parent',
+        'label',
+        'type',
+        'contentselect',
+    ];
+
     public function __construct(BaseExtension $extension)
     {
         $this->boltConfig = $extension->getBoltConfig();
@@ -68,7 +107,6 @@ class Checks
         $this->newContentTypeCheck();
         $this->slugUsesCheck();
         $this->fieldTypesCheck();
-        $this->fieldContentInsideSetCheck();
         $this->localizedFieldsAndContentLocalesCheck();
         $this->duplicateTaxonomyAndContentTypeCheck();
         $this->singleHostnameCheck();
@@ -83,6 +121,7 @@ class Checks
         $this->symfonyVersionCheck();
         $this->checkDeprecatedDebug();
         $this->checkDoctrineMissingJsonGetText();
+        $this->forbiddenFieldNamesCheck();
 
         return [
             'severity' => $this->severity,
@@ -208,26 +247,39 @@ class Checks
         }
     }
 
-    private function fieldContentInsideSetCheck(): void
+    private function forbiddenFieldNamesCheck(): void
     {
         foreach ($this->boltConfig->get('contenttypes') as $contentType) {
-            $fieldsToCheck = $contentType->get('fields')->toArray();
+            $fields = $contentType->get('fields')->toArray();
 
-            while (! empty($fieldsToCheck)) {
-                $field = array_pop($fieldsToCheck);
+            foreach($fields as $name => $field) {
+                $this->checkFieldName($name, $field, $contentType->get('slug'));
+            }
+        }
+    }
 
-                if ($field['type'] === 'set') {
-                    if (in_array('content', array_keys($field['fields']), true)) {
-                        $notice = sprintf('A field with name <code>content</code> was found inside the <code>%s</code> Set field.', $field['label']);
-                        $info = sprintf('You should not use a <code>content</code> field inside a set. Please rename it.');
+    private function checkFieldName(string $name, array $field, string $ct): void
+    {
+        if ($field['type'] === 'set') {
+            if (in_array(strtolower($name), $this->setForbiddenFieldNames, true)) {
+                $notice = sprintf('A Set field in <strong>%s</strong> has a name <code>%s</code>. You may not be able to access a field with that name in Twig.', $ct, $name);
+                $info = sprintf('You should not use a <code>%s</code> field inside a set. Please rename it.', $name);
 
-                        $this->setNotice(2, $notice, $info);
-                    }
-                } elseif ($field['type'] === 'collection') {
-                    foreach ($field['fields'] as $subfields) {
-                        $fieldsToCheck[] = $subfields;
-                    }
-                }
+                $this->setNotice(2, $notice, $info);
+            }
+
+            foreach($field['fields'] as $subname => $subfield) {
+                $this->checkFieldName($subname, $subfield, $ct);
+            }
+        } elseif ($field['type'] === 'collection') {
+            foreach ($field['fields'] as $subname => $subfield) {
+                $this->checkFieldName($subname, $subfield, $ct);
+            }
+        } else {
+            // Any other field.
+            if (in_array(strtolower($name), $this->generalForbiddenFieldNames)) {
+                $notice = sprintf("A field with name <code>%s</code> was found inside the <strong>%s</strong> ContentType. You may not be able to access a field with that name in Twig.", $name, $ct);
+                $this->setNotice(2, $notice, '');
             }
         }
     }
