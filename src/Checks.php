@@ -47,7 +47,7 @@ class Checks
         3 => 'danger',
     ];
 
-    private $generalFrobiddenFieldNames = [
+    private $generalForbiddenFieldNames = [
         'id',
         'definitionfromcontenttypeconfig',
         'twig',
