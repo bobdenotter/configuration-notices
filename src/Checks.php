@@ -265,7 +265,7 @@ class Checks
             }
         } else {
             // Any other field.
-            if (in_array(strtolower($name), $this->generalFrobiddenFieldNames)) {
+            if (in_array(strtolower($name), $this->generalForbiddenFieldNames)) {
                 $notice = sprintf("A field with name <code>%s</code> was found inside the <strong>%s</strong> ContentType. You may not be able to access a field with that name in Twig.", $name, $ct);
                 $this->setNotice(2, $notice, '');
             }
