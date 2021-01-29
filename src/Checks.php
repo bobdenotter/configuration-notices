@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Yaml\Yaml;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Tightenco\Collect\Support\Collection;
 
 class Checks
@@ -487,17 +488,20 @@ class Checks
      */
     private function unauthorizedThemeFilesCheck()
     {
-        $fileName = '/configtester_' . date('Y-m-d-h-i-s') . '.twig';
+        $fileName = '/configtester_access.twig';
 
-        $url = $this->boltConfig->get('general/theme') . $fileName;
+        $url = 'theme/' . $this->boltConfig->get('general/theme') . $fileName;
 
-        if ($this->isWritable('theme', $fileName) && $this->isReachable($url)) {
+        if ($this->isWritable('theme', $fileName, true) && $this->isReachable($url)) {
             $notice = "Twig files in the theme folder are accessible publicly, but best practice is to forbid direct access to such files in your theme.";
             $info = 'Check the <a target="_blank" href="https://docs.bolt.cm/4.0/installation/webserver/apache#htaccess-update-for-bolt-versions-lower-than-4-1-13">';
             $info .= 'webserver configuraiton documentation for Apache"</a> or <a href="https://docs.bolt.cm/4.0/installation/webserver/nginx" target="_blank">Nginx</a> to fix this vulnerability.';
 
             $this->setNotice(3, $notice, $info);
         }
+
+        // Delete the file.
+        $this->isWritable('theme', $fileName);
     }
 
     /**
@@ -600,14 +604,16 @@ class Checks
         return mb_strpos($file, 'Symfony\Compo' . 'nent\Debug\Debug') !== false;
     }
 
-    private function isWritable($fileSystem, $filename): bool
+    private function isWritable($fileSystem, $filename, bool $keep = false): bool
     {
         $filePath = $this->boltConfig->getPath($fileSystem) . $filename;
         $filesystem = new Filesystem();
 
         try {
             $filesystem->dumpFile($filePath, 'ok');
-            $filesystem->remove($filePath);
+            if (! $keep) {
+                $filesystem->remove($filePath);
+            }
         } catch (\Throwable $e) {
             return false;
         }
@@ -624,7 +630,13 @@ class Checks
         $url = $this->container->get('router')->generate('homepage', [], RouterInterface::ABSOLUTE_URL) . $relativeUrl;
         $response = $this->client->request('GET', $url);
 
-        return $response->getStatusCode() === Response::HTTP_OK;
+        try {
+            return $response->getStatusCode() === Response::HTTP_OK;
+        } catch (TransportExceptionInterface $e) {
+        }
+
+        //  ¯\_(ツ)_/¯
+        return false;
     }
 
     private function setSeverity(int $severity): void
