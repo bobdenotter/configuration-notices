@@ -481,7 +481,7 @@ class Checks
     }
 
     /**
-     * Check if server configuration forbids access to public/theme/configcheck.twig
+     * Check if server configuration forbids access to /theme/{the_theme_name}/configtester_access.twig
      */
     private function unauthorizedThemeFilesCheck()
     {
