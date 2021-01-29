@@ -88,9 +88,6 @@ class Checks
         'contentselect',
     ];
 
-    /** @var Packages */
-    private $assetManager;
-
     private $client = null;
 
     public function __construct(BaseExtension $extension)
