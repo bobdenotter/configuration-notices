@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace BobdenOtter\ConfigurationNotices;
 
-use Bolt\Canonical;
 use Bolt\Configuration\Config;
-use Bolt\Configuration\Content\ContentType;
-use Bolt\Entity\Field;
 use Bolt\Extension\BaseExtension;
 use Bolt\Repository\FieldRepository;
 use ComposerPackages\Packages;
 use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Yaml\Yaml;
 use Tightenco\Collect\Support\Collection;
 
@@ -87,6 +87,11 @@ class Checks
         'contentselect',
     ];
 
+    /** @var Packages */
+    private $assetManager;
+
+    private $client = null;
+
     public function __construct(BaseExtension $extension)
     {
         $this->boltConfig = $extension->getBoltConfig();
@@ -122,6 +127,7 @@ class Checks
         $this->checkDeprecatedDebug();
         $this->checkDoctrineMissingJsonGetText();
         $this->forbiddenFieldNamesCheck();
+        $this->unauthorizedThemeFilesCheck();
 
         return [
             'severity' => $this->severity,
@@ -477,6 +483,24 @@ class Checks
     }
 
     /**
+     * Check if server configuration forbids access to public/theme/configcheck.twig
+     */
+    private function unauthorizedThemeFilesCheck()
+    {
+        $fileName = '/configtester_' . date('Y-m-d-h-i-s') . '.twig';
+
+        $url = $this->boltConfig->get('general/theme') . $fileName;
+
+        if ($this->isWritable('theme', $fileName) && $this->isReachable($url)) {
+            $notice = "Twig files in the theme folder are accessible publicly, but best practice is to forbid direct access to such files in your theme.";
+            $info = 'Check the <a target="_blank" href="https://docs.bolt.cm/4.0/installation/webserver/apache#htaccess-update-for-bolt-versions-lower-than-4-1-13">';
+            $info .= 'webserver configuraiton documentation for Apache"</a> or <a href="https://docs.bolt.cm/4.0/installation/webserver/nginx" target="_blank">Nginx</a> to fix this vulnerability.';
+
+            $this->setNotice(3, $notice, $info);
+        }
+    }
+
+    /**
      * If the site is in maintenance mode, show this on the dashboard.
      */
     protected function maintenanceCheck(): void
@@ -589,6 +613,18 @@ class Checks
         }
 
         return true;
+    }
+
+    private function isReachable(string $relativeUrl)
+    {
+        if (! $this->client) {
+            $this->client = HttpClient::create();
+        }
+
+        $url = $this->container->get('router')->generate('homepage', [], RouterInterface::ABSOLUTE_URL) . $relativeUrl;
+        $response = $this->client->request('GET', $url);
+
+        return $response->getStatusCode() === Response::HTTP_OK;
     }
 
     private function setSeverity(int $severity): void
