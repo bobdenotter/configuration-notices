@@ -492,7 +492,7 @@ class Checks
         if ($this->isWritable('theme', $fileName, true) && $this->isReachable($url)) {
             $notice = "Twig files in the theme folder are accessible publicly, but best practice is to forbid direct access to such files in your theme.";
             $info = 'Check the <a target="_blank" href="https://docs.bolt.cm/4.0/installation/webserver/apache#htaccess-update-for-bolt-versions-lower-than-4-1-13">';
-            $info .= 'webserver configuraiton documentation for Apache"</a> or <a href="https://docs.bolt.cm/4.0/installation/webserver/nginx" target="_blank">Nginx</a> to fix this vulnerability.';
+            $info .= 'webserver configuration documentation for Apache"</a> or <a href="https://docs.bolt.cm/4.0/installation/webserver/nginx" target="_blank">Nginx</a> to fix this vulnerability.';
 
             $this->setNotice(3, $notice, $info);
         }
