@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace BobdenOtter\ConfigurationNotices;
 
-use Bolt\Canonical;
 use Bolt\Configuration\Config;
-use Bolt\Configuration\Content\ContentType;
-use Bolt\Entity\Field;
 use Bolt\Extension\BaseExtension;
 use Bolt\Repository\FieldRepository;
 use ComposerPackages\Packages;
 use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Yaml\Yaml;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Tightenco\Collect\Support\Collection;
 
 class Checks
@@ -87,6 +88,8 @@ class Checks
         'contentselect',
     ];
 
+    private $client = null;
+
     public function __construct(BaseExtension $extension)
     {
         $this->boltConfig = $extension->getBoltConfig();
@@ -122,6 +125,7 @@ class Checks
         $this->checkDeprecatedDebug();
         $this->checkDoctrineMissingJsonGetText();
         $this->forbiddenFieldNamesCheck();
+        $this->unauthorizedThemeFilesCheck();
 
         return [
             'severity' => $this->severity,
@@ -477,6 +481,27 @@ class Checks
     }
 
     /**
+     * Check if server configuration forbids access to /theme/{the_theme_name}/configtester_access.twig
+     */
+    private function unauthorizedThemeFilesCheck()
+    {
+        $fileName = '/configtester_access.twig';
+
+        $url = 'theme/' . $this->boltConfig->get('general/theme') . $fileName;
+
+        if ($this->isWritable('theme', $fileName, true) && $this->isReachable($url)) {
+            $notice = "Twig files in the theme folder are accessible publicly, but best practice is to forbid direct access to such files in your theme.";
+            $info = 'Check the <a target="_blank" href="https://docs.bolt.cm/4.0/installation/webserver/apache#htaccess-update-for-bolt-versions-lower-than-4-1-13">';
+            $info .= 'webserver configuration documentation for Apache"</a> or <a href="https://docs.bolt.cm/4.0/installation/webserver/nginx" target="_blank">Nginx</a> to fix this vulnerability.';
+
+            $this->setNotice(3, $notice, $info);
+        }
+
+        // Delete the file.
+        $this->isWritable('theme', $fileName);
+    }
+
+    /**
      * If the site is in maintenance mode, show this on the dashboard.
      */
     protected function maintenanceCheck(): void
@@ -576,19 +601,39 @@ class Checks
         return mb_strpos($file, 'Symfony\Compo' . 'nent\Debug\Debug') !== false;
     }
 
-    private function isWritable($fileSystem, $filename): bool
+    private function isWritable($fileSystem, $filename, bool $keep = false): bool
     {
         $filePath = $this->boltConfig->getPath($fileSystem) . $filename;
         $filesystem = new Filesystem();
 
         try {
             $filesystem->dumpFile($filePath, 'ok');
-            $filesystem->remove($filePath);
+            if (! $keep) {
+                $filesystem->remove($filePath);
+            }
         } catch (\Throwable $e) {
             return false;
         }
 
         return true;
+    }
+
+    private function isReachable(string $relativeUrl)
+    {
+        if (! $this->client) {
+            $this->client = HttpClient::create();
+        }
+
+        $url = $this->container->get('router')->generate('homepage', [], RouterInterface::ABSOLUTE_URL) . $relativeUrl;
+        $response = $this->client->request('GET', $url);
+
+        try {
+            return $response->getStatusCode() === Response::HTTP_OK;
+        } catch (TransportExceptionInterface $e) {
+        }
+
+        //  ¯\_(ツ)_/¯
+        return false;
     }
 
     private function setSeverity(int $severity): void
