@@ -66,7 +66,7 @@ class Checks
         'statuses',
         'authorname',
         'taxonomies',
-        'array'
+        'array',
     ];
 
     private $setForbiddenFieldNames = [
@@ -153,22 +153,8 @@ class Checks
             return;
         }
 
-        $host = parse_url($this->request->getSchemeAndHttpHost());
-
-        // If we have an IP-address, we assume it's "dev"
-        if (filter_var($host['host'], FILTER_VALIDATE_IP) !== false) {
+        if ($this->onLocalUrl()) {
             return;
-        }
-
-        $domainPartials = array_unique(array_merge(
-            $this->extensionConfig->get('local_domains'),
-            $this->defaultDomainPartials
-        ));
-
-        foreach ($domainPartials as $partial) {
-            if (mb_strpos($host['host'], $partial) !== false) {
-                return;
-            }
         }
 
         $this->setNotice(
@@ -182,6 +168,29 @@ class Checks
              config <code>yaml</code></abbr> file with a (partial) domain name in it, that should be
              seen as a development environment: <code>local_domains: [ '.foo' ]</code>."
         );
+    }
+
+    private function onLocalUrl(): bool
+    {
+        $host = parse_url($this->request->getSchemeAndHttpHost());
+
+        // If we have an IP-address, we assume it's "dev" / local
+        if (filter_var($host['host'], FILTER_VALIDATE_IP) !== false) {
+            return true;
+        }
+
+        $domainPartials = array_unique(array_merge(
+            $this->extensionConfig->get('local_domains'),
+            $this->defaultDomainPartials
+        ));
+
+        foreach ($domainPartials as $partial) {
+            if (mb_strpos($host['host'], $partial) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -212,21 +221,23 @@ class Checks
 
         foreach ($this->boltConfig->get('contenttypes') as $contentType) {
             $fields = $contentType->get('fields');
-            $slugs = $fields->filter(function(Collection $field) {
+            $slugs = $fields->filter(function (Collection $field) {
                 return $field->get('type') === 'slug';
             });
 
-            foreach($slugs as $name => $slug) {
+            foreach ($slugs as $name => $slug) {
                 if (! $slug->has('uses')) {
                     $notice = sprintf("The <b>ContentType %s</b> has a slug field '%s', which does not define the <code>uses</code> attribute.", $contentType->get('name'), $name);
                     $this->setNotice(2, $notice, $info);
+
                     continue 2; // apply continue to nested loop.
                 }
 
-                foreach($slug->get('uses')->all() as $fieldName) {
-                    if (!$fields->has($fieldName)) {
+                foreach ($slug->get('uses')->all() as $fieldName) {
+                    if (! $fields->has($fieldName)) {
                         $notice = sprintf('The <b>ContentType %s</b> has an incorrectly defined <code>slug</code>. It refers to <code>%s</code>, but there is no such Field defined.', $contentType->get('name'), $fieldName);
                         $this->setNotice(2, $notice, $info);
+
                         continue 2; // apply continue to nested loop.
                     }
                 }
@@ -256,7 +267,7 @@ class Checks
         foreach ($this->boltConfig->get('contenttypes') as $contentType) {
             $fields = $contentType->get('fields')->toArray();
 
-            foreach($fields as $name => $field) {
+            foreach ($fields as $name => $field) {
                 $this->checkFieldName($name, $field, $contentType->get('slug'));
             }
         }
@@ -265,14 +276,14 @@ class Checks
     private function checkFieldName(string $name, array $field, string $ct): void
     {
         if ($field['type'] === 'set') {
-            if (in_array(strtolower($name), $this->setForbiddenFieldNames, true)) {
+            if (in_array(mb_strtolower($name), $this->setForbiddenFieldNames, true)) {
                 $notice = sprintf('A Set field in <strong>%s</strong> has a name <code>%s</code>. You may not be able to access a field with that name in Twig.', $ct, $name);
                 $info = sprintf('You should not use a <code>%s</code> field inside a set. Please rename it.', $name);
 
                 $this->setNotice(2, $notice, $info);
             }
 
-            foreach($field['fields'] as $subname => $subfield) {
+            foreach ($field['fields'] as $subname => $subfield) {
                 $this->checkFieldName($subname, $subfield, $ct);
             }
         } elseif ($field['type'] === 'collection') {
@@ -281,8 +292,8 @@ class Checks
             }
         } else {
             // Any other field.
-            if (in_array(strtolower($name), $this->generalForbiddenFieldNames)) {
-                $notice = sprintf("A field with name <code>%s</code> was found inside the <strong>%s</strong> ContentType. You may not be able to access a field with that name in Twig.", $name, $ct);
+            if (in_array(mb_strtolower($name), $this->generalForbiddenFieldNames, true)) {
+                $notice = sprintf('A field with name <code>%s</code> was found inside the <strong>%s</strong> ContentType. You may not be able to access a field with that name in Twig.', $name, $ct);
                 $this->setNotice(2, $notice, '');
             }
         }
@@ -483,14 +494,20 @@ class Checks
     /**
      * Check if server configuration forbids access to /theme/{the_theme_name}/configtester_access.twig
      */
-    private function unauthorizedThemeFilesCheck()
+    private function unauthorizedThemeFilesCheck(): void
     {
+        // We don't perform this check if it's disabled in config (default to false),
+        // or if we're in a local development environment
+        if ($this->onLocalUrl() || ! array_key_exists('theme_folder_access', (array) $this->extensionConfig->get('checks')) || ! $this->extensionConfig->get('checks')['theme_folder_access']) {
+            return;
+        }
+
         $fileName = '/configtester_access.twig';
 
         $url = 'theme/' . $this->boltConfig->get('general/theme') . $fileName;
 
         if ($this->isWritable('theme', $fileName, true) && $this->isReachable($url)) {
-            $notice = "Twig files in the theme folder are accessible publicly, but best practice is to forbid direct access to such files in your theme.";
+            $notice = 'Twig files in the theme folder are accessible publicly, but best practice is to forbid direct access to such files in your theme.';
             $info = 'Check the <a target="_blank" href="https://docs.bolt.cm/4.0/installation/webserver/apache#htaccess-update-for-bolt-versions-lower-than-4-1-13">';
             $info .= 'webserver configuration documentation for Apache"</a> or <a href="https://docs.bolt.cm/4.0/installation/webserver/nginx" target="_blank">Nginx</a> to fix this vulnerability.';
 
@@ -553,16 +570,16 @@ class Checks
     /**
      * Checks if a BC introduced in 4.1 in doctrine.yaml is fixed (manually).
      */
-    private function checkDoctrineMissingJsonGetText()
+    private function checkDoctrineMissingJsonGetText(): void
     {
         $projectDir = $this->container->get('kernel')->getprojectDir();
-        $doctrine = Yaml::parseFile($projectDir. DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'packages'. DIRECTORY_SEPARATOR .'doctrine.yaml');
+        $doctrine = Yaml::parseFile($projectDir . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'packages' . DIRECTORY_SEPARATOR . 'doctrine.yaml');
 
         $functions = $doctrine['doctrine']['orm']['dql']['string_functions'];
 
         if (! array_key_exists('JSON_GET_TEXT', $functions)) {
-            $notice = "The <code>JSON_TEXT_FUNCTION</code> is missing from your <code>config/packages/doctrine.yaml</code> definition.";
-            $info = "To resolve this, modify your <code>doctrine.yaml</code> file according to the changes on the ";
+            $notice = 'The <code>JSON_TEXT_FUNCTION</code> is missing from your <code>config/packages/doctrine.yaml</code> definition.';
+            $info = 'To resolve this, modify your <code>doctrine.yaml</code> file according to the changes on the ';
             $info .= "<a href='https://github.com/bolt/project/pull/35/files'>bolt/project</a> repository.";
 
             $this->setNotice(3, $notice, $info);
