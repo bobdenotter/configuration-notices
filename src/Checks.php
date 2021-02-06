@@ -153,22 +153,8 @@ class Checks
             return;
         }
 
-        $host = parse_url($this->request->getSchemeAndHttpHost());
-
-        // If we have an IP-address, we assume it's "dev"
-        if (filter_var($host['host'], FILTER_VALIDATE_IP) !== false) {
+        if ($this->onLocalUrl()) {
             return;
-        }
-
-        $domainPartials = array_unique(array_merge(
-            $this->extensionConfig->get('local_domains'),
-            $this->defaultDomainPartials
-        ));
-
-        foreach ($domainPartials as $partial) {
-            if (mb_strpos($host['host'], $partial) !== false) {
-                return;
-            }
         }
 
         $this->setNotice(
@@ -182,6 +168,29 @@ class Checks
              config <code>yaml</code></abbr> file with a (partial) domain name in it, that should be
              seen as a development environment: <code>local_domains: [ '.foo' ]</code>."
         );
+    }
+
+    private function onLocalUrl(): bool
+    {
+        $host = parse_url($this->request->getSchemeAndHttpHost());
+
+        // If we have an IP-address, we assume it's "dev" / local
+        if (filter_var($host['host'], FILTER_VALIDATE_IP) !== false) {
+            return true;
+        }
+
+        $domainPartials = array_unique(array_merge(
+            $this->extensionConfig->get('local_domains'),
+            $this->defaultDomainPartials
+        ));
+
+        foreach ($domainPartials as $partial) {
+            if (mb_strpos($host['host'], $partial) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -485,6 +494,13 @@ class Checks
      */
     private function unauthorizedThemeFilesCheck()
     {
+        // We don't perform this check if it's disabled in config (default to false),
+        // or if we're in a local development environment
+        if ($this->onLocalUrl() || ! array_key_exists('theme_folder_access', (array) $this->extensionConfig->get('checks')) || ! $this->extensionConfig->get('checks')['theme_folder_access'])
+        {
+            return;
+        }
+
         $fileName = '/configtester_access.twig';
 
         $url = 'theme/' . $this->boltConfig->get('general/theme') . $fileName;
