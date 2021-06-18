@@ -125,6 +125,7 @@ class Checks
         $this->checkDeprecatedDebug();
         $this->checkDoctrineMissingJsonGetText();
         $this->forbiddenFieldNamesCheck();
+        $this->checkInferredSlug();
         $this->unauthorizedThemeFilesCheck();
 
         return [
@@ -272,6 +273,25 @@ class Checks
             }
         }
     }
+
+    private function checkInferredSlug(): void
+    {
+        foreach ($this->boltConfig->get('contenttypes') as $contentType) {
+            if (!empty($contentType->get('inferred_slug'))) {
+                dump($contentType->get('inferred_slug'));
+                $notice = sprintf(
+                    'There is an ambiguity in the <code>slug</code> of the <strong>%s</strong> ContentType: It can be either <code>%s</code> or <code>%s</code>.',
+                    $contentType->get('name'),
+                    $contentType->get('inferred_slug')[0],
+                    $contentType->get('inferred_slug')[1]
+                );
+                $info = sprintf('You should either make the ContentType\'s key and its <code>name</code>-field consistent, or explicitly define the <code>slug</code> as you\'d like to reference this ContentType.');
+
+                $this->setNotice(2, $notice, $info);
+            }
+        }
+    }
+
 
     private function checkFieldName(string $name, array $field, string $ct): void
     {
