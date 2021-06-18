@@ -231,7 +231,8 @@ class Checks
                     $notice = sprintf("The <b>ContentType %s</b> has a slug field '%s', which does not define the <code>uses</code> attribute.", $contentType->get('name'), $name);
                     $this->setNotice(2, $notice, $info);
 
-                    continue 2; // apply continue to nested loop.
+                    // apply continue to nested loop.
+                    continue 2;
                 }
 
                 foreach ($slug->get('uses')->all() as $fieldName) {
@@ -239,7 +240,8 @@ class Checks
                         $notice = sprintf('The <b>ContentType %s</b> has an incorrectly defined <code>slug</code>. It refers to <code>%s</code>, but there is no such Field defined.', $contentType->get('name'), $fieldName);
                         $this->setNotice(2, $notice, $info);
 
-                        continue 2; // apply continue to nested loop.
+                        // apply continue to nested loop.
+                        continue 2;
                     }
                 }
             }
@@ -277,21 +279,22 @@ class Checks
     private function checkInferredSlug(): void
     {
         foreach ($this->boltConfig->get('contenttypes') as $contentType) {
-            if (!empty($contentType->get('inferred_slug'))) {
-                dump($contentType->get('inferred_slug'));
+            if (! empty($contentType->get('inferred_slug'))) {
                 $notice = sprintf(
                     'There is an ambiguity in the <code>slug</code> of the <strong>%s</strong> ContentType: It can be either <code>%s</code> or <code>%s</code>.',
                     $contentType->get('name'),
                     $contentType->get('inferred_slug')[0],
                     $contentType->get('inferred_slug')[1]
                 );
-                $info = sprintf('You should either make the ContentType\'s key and its <code>name</code>-field consistent, or explicitly define the <code>slug</code> as you\'d like to reference this ContentType.');
+                $info = sprintf(
+                    'You should either make the ContentType\'s key and its <code>name</code>-field consistent, or explicitly define the <code>slug</code> as you\'d like to reference this ContentType. For now, Bolt will use <code>%s</code>',
+                    $contentType->get('slug')
+                );
 
                 $this->setNotice(2, $notice, $info);
             }
         }
     }
-
 
     private function checkFieldName(string $name, array $field, string $ct): void
     {
