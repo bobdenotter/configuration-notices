@@ -300,7 +300,7 @@ class Checks
     {
         if ($field['type'] === 'set') {
             if (in_array(mb_strtolower($name), $this->setForbiddenFieldNames, true)) {
-                $notice = sprintf('A Set field in <strong>%s</strong> has a name <code>%s</code>. You may not be able to access a field with that name in Twig.', $ct, $name);
+                $notice = sprintf('A Set field in <strong>%s</strong> has a name <code>%s</code>. You may not be able to access a field with that name in Twig, because it is a reserved Bolt word.', $ct, $name);
                 $info = sprintf('You should not use a <code>%s</code> field inside a set. Please rename it.', $name);
 
                 $this->setNotice(2, $notice, $info);
