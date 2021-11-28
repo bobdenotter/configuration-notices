@@ -107,6 +107,7 @@ class Checks
         }
 
         $this->liveCheck();
+        $this->envCheck();
         $this->newContentTypeCheck();
         $this->slugUsesCheck();
         $this->fieldTypesCheck();
@@ -168,6 +169,26 @@ class Checks
             "If you wish to hide this message, add a key to your <abbr title='config/extensions/bobdenotter-configurationnotices.yaml'>
              config <code>yaml</code></abbr> file with a (partial) domain name in it, that should be
              seen as a development environment: <code>local_domains: [ '.foo' ]</code>."
+        );
+    }
+
+
+    /**
+     * Check whether the configured APP_ENV is valid.
+     */
+    private function envCheck(): void
+    {
+        if (in_array($this->getParameter('kernel.environment'), ['prod', 'dev', 'test'])) {
+            return;
+        }
+
+        $this->setNotice(
+            2,
+            'Bolt supports three different modes for <code>APP_ENV</code>: <code>dev</code>, 
+                <code>prod</code> and <code>test</code>. You should only use one of these three.',
+            "The current configured <code>APP_ENV</code> is <code>" .
+                $this->getParameter('kernel.environment') . "</code>. Make sure you've used lowercase in 
+                your configured environment."
         );
     }
 
