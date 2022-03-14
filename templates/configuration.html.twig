@@ -9,7 +9,7 @@
         <p>Bolt has detected one or more configuration issues. You should resolve these, for optimum performance:</p>
 
         {% for result in results.notices %}
-            <p><span class="badge badge-{{ result.severity }}">{{ result.severity|ucwords }}</span> - {{ result.notice|raw }}
+            <p><span class="badge bg-{{ result.severity }}">{{ result.severity|ucwords }}</span> - {{ result.notice|raw }}
             {% if result.info %}</p>
             <small style="padding-top: 0.5rem; display: block;">{{ result.info|raw }}</small>
             {% endif %}
