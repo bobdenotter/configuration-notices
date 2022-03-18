@@ -619,6 +619,7 @@ class Checks
         $projectDir = $this->container->get('kernel')->getprojectDir();
         $doctrine = Yaml::parseFile($projectDir . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'packages' . DIRECTORY_SEPARATOR . 'doctrine.yaml');
 
+        // Ensure it doesn't break, if there are multiple entity managers causing a different configuration structure
         $functions = array_key_exists('dql', $doctrine['doctrine']['orm']) ?
             $doctrine['doctrine']['orm']['dql']['string_functions'] : $doctrine['doctrine']['orm']['entity_managers']['default']['dql']['string_functions'];
 
