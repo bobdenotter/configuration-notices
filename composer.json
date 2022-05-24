@@ -1,6 +1,6 @@
 {
     "name": "bobdenotter/configuration-notices",
-    "description": "💡 A small tool to point out common pitfalls for Bolt 4 configuration settings",
+    "description": "💡 A small tool to point out common pitfalls for Bolt 5 configuration settings",
     "type": "bolt-extension",
     "license": "MIT",
     "authors": [
@@ -13,7 +13,7 @@
         "php": ">=7.2.9"
     },
     "require-dev": {
-        "bolt/core": "^4.1 || ^5.0",
+        "bolt/core": "^5.1",
         "symplify/easy-coding-standard": "^8.3"
     },
     "autoload": {
