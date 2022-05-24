@@ -1,7 +1,7 @@
 # 📰 Bolt Configuration Notices Widget
 
 Bolt Configuration Notices is a small tool to point out common pitfalls for 
-Bolt 4 configuration settings.
+Bolt 5 configuration settings.
 
 ```bash
 composer require bobdenotter/configuration-notices 
