@@ -582,7 +582,7 @@ class Checks
             return;
         }
 
-        $checkServices = Yaml::parseFile(dirname(__DIR__) . '/services.yaml');
+        $checkServices = (array) Yaml::parseFile(dirname(__DIR__) . '/services.yaml');
 
         $availableServices = $this->extension->getAllServiceNames();
 
