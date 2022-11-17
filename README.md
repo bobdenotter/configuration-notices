@@ -1,10 +1,10 @@
 # 📰 Bolt Configuration Notices Widget
 
-Bolt Configuration Notices is a small tool to point out common pitfalls for 
+Bolt Configuration Notices is a small tool to point out common pitfalls for
 Bolt 5 configuration settings.
 
 ```bash
-composer require bobdenotter/configuration-notices 
+composer require bobdenotter/configuration-notices
 ```
 
 -------
@@ -16,12 +16,12 @@ usage of the extension in your Bolt Project
 
 First, make sure dependencies are installed:
 
-```
+```bash
 COMPOSER_MEMORY_LIMIT=-1 composer update
 ```
 
 And then run ECS:
 
-```
+```bash
 vendor/bin/ecs check src
 ```

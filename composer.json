@@ -13,7 +13,7 @@
         "php": ">=7.2.9"
     },
     "require-dev": {
-        "bolt/core": "^5.1",
+        "bolt/core": "^5.2",
         "symplify/easy-coding-standard": "^8.3"
     },
     "autoload": {
@@ -21,7 +21,7 @@
             "BobdenOtter\\ConfigurationNotices\\": "src/"
         }
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "beta",
     "prefer-stable": true,
     "extra": {
         "entrypoint": "BobdenOtter\\ConfigurationNotices\\Extension",

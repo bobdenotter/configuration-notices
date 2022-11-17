@@ -1,7 +1,11 @@
 <!-- Generated at "{{ "now"|date('Y-m-d H:i:s') }}" -->
 <div class="card mb-4">
-    <div class="card-header progress-bar progress-bar-striped progress-bar-animated
-        {% if results.severity == 1 %}bg-info{% elseif results.severity == 2 %}bg-warning{% else %}bg-danger{% endif %}">
+    <div class="progress" style="width: 100%; height: 10px; border-radius: 0;">
+        <div class="card-header progress-bar progress-bar-striped progress-bar-animated
+            {% if results.severity == 1 %}bg-info{% elseif results.severity == 2 %}bg-warning{% else %}bg-danger{% endif %}" style="width: 100%;">
+        </div>
+    </div>
+    <div class="card-header">
         <span  style="text-align: left;"><i class="fas fa-lightbulb" style="display: inline-block"></i>  Bolt Configuration Notices</span>
     </div>
     <div class="card-body configuration-notices">
@@ -9,8 +13,7 @@
         <p>Bolt has detected one or more configuration issues. You should resolve these, for optimum performance:</p>
 
         {% for result in results.notices %}
-            <p><span class="badge bg-{{ result.severity }} badge-{{ result.severity }}">{{ result.severity|ucwords }}</span> - {{ result.notice|raw }}
-            {# Note: `badge-{{ result.severity }}` can be removed after the Bootstrap 5 update is complete #}
+            <p><span class="badge bg-{{ result.severity }}">{{ result.severity|ucwords }}</span> - {{ result.notice|raw }}
             {% if result.info %}</p>
             <small style="padding-top: 0.5rem; display: block;">{{ result.info|raw }}</small>
             {% endif %}
