@@ -404,7 +404,7 @@ class Checks
         $hostname = $this->request->getHttpHost();
 
         if (mb_strpos($hostname, '.') === false) {
-            $notice = "You are using <code>${hostname}</code> as host name. Some browsers have problems with sessions on hostnames that do not have a <code>.tld</code> in them.";
+            $notice = "You are using <code>{$hostname}</code> as host name. Some browsers have problems with sessions on hostnames that do not have a <code>.tld</code> in them.";
             $info = 'If you experience difficulties logging on, either configure your webserver to use a hostname with a dot in it, or use another browser.';
 
             $this->setNotice(1, $notice, $info);
@@ -419,7 +419,7 @@ class Checks
         $hostname = $this->request->getHttpHost();
 
         if (filter_var($hostname, FILTER_VALIDATE_IP)) {
-            $notice = "You are using the <strong>IP address</strong> <code>${hostname}</code> as host name. This is known to cause problems with sessions on certain browsers.";
+            $notice = "You are using the <strong>IP address</strong> <code>{$hostname}</code> as host name. This is known to cause problems with sessions on certain browsers.";
             $info = 'If you experience difficulties logging on, either configure your webserver to use a proper hostname, or use another browser.';
 
             $this->setNotice(1, $notice, $info);
@@ -495,7 +495,7 @@ class Checks
         if ($hostname['scheme'] !== $_SERVER['CANONICAL_SCHEME'] || $hostname['host'] !== $_SERVER['CANONICAL_HOST']) {
             $canonical = sprintf('%s://%s', $_SERVER['CANONICAL_SCHEME'], $_SERVER['CANONICAL_HOST']);
             $login = sprintf('%s%s', $canonical, $this->getParameter('bolt.backend_url'));
-            $notice = "The <strong>canonical hostname</strong> is set to <code>${canonical}</code> in <code>config.yaml</code>,
+            $notice = "The <strong>canonical hostname</strong> is set to <code>{$canonical}</code> in <code>config.yaml</code>,
                 but you are currently logged in using another hostname. This might cause issues with uploaded files, or
                 links inserted in the content.";
             $info = sprintf(
@@ -588,7 +588,7 @@ class Checks
 
         foreach ($checkServices as $key => $service) {
             if (! $availableServices->contains($service['name'])) {
-                $notice = "Bolt's <code>services.yaml</code> is missing the <code>${key}</code>. This needs to be added in order to function correctly.";
+                $notice = "Bolt's <code>services.yaml</code> is missing the <code>{$key}</code>. This needs to be added in order to function correctly.";
                 $info = 'To remedy this, edit <code>services.yaml</code> in the <code>config</code> folder and add the following:';
                 $info .= '<pre>' . $service['code'] . '</pre>';
 
